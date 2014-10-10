@@ -2,7 +2,7 @@ import os
 from setuptools import setup, find_packages
 
 # package meta info
-NAME = "thrift connector"
+NAME = "thrift_connector"
 VERSION = "0.1"
 DESCRIPTION = "Lib to connect to thrift services with pools"
 AUTHOR = "Haochuan Guo"
@@ -13,7 +13,8 @@ KEYWORDS = "thrift connection pool"
 
 # package contents
 PACKAGES = find_packages(
-    exclude=['tests.*', 'tests', 'examples.*', 'examples'])
+    exclude=['tests.*', 'tests', 'examples.*', 'examples',
+             'dev_requirements.txt'])
 
 here = os.path.abspath(os.path.dirname(__file__))
 
