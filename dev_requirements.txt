@@ -1,0 +1,7 @@
+dev_requirements.txt
+
+:Author: WooParadog
+:Email: guohaochuan@gmail.com
+:Date: 2014-10-10 11:59
+
+
