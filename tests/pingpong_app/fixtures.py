@@ -9,12 +9,6 @@ import random
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
-worker_class = "thriftpy_gevent"
-thrift_protocol_factory = "thriftpy.protocol:TCyBinaryProtocolFactory"
-thrift_transport_factory = "thriftpy.transport:TCyBufferedTransportFactory"  # noqa
-
-errorlog = '-'
-
 
 def worker_term(worker):
     os.environ['about_to_shutdown'] = "1"
@@ -51,7 +45,7 @@ class TestServerInfo(object):
 def pingpong_thrift_client(request, pingpong_service_key,
                            pingpong_thrift_service):
     port = random.randint(55536, 65536)
-    config_path = os.path.abspath(__file__)
+    config_path = "./examples/gunicorn_config.py"
     gunicorn_server = subprocess.Popen(
         ["gunicorn_thrift", "examples.pingpong_app.app:app",
             "-c", config_path, "--bind", "0.0.0.0:%s" % port]
