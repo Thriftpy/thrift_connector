@@ -67,3 +67,4 @@ Session.vim
 *~
 
 .ropeproject
+examples/pingpong_app/pingpong_sdk/
