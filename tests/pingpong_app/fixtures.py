@@ -23,7 +23,15 @@ def worker_term(worker):
 @pytest.fixture(scope="session")
 def pingpong_thrift_service(request, pingpong_service_key):
     import thriftpy
-    thrift_service = thriftpy.load(os.path.join(os.path.dirname(__file__), "pingpong.thrift"), "pingpong_thrift")  # noqa
+    thrift_service = thriftpy.load(
+        os.path.join(
+            os.path.dirname(
+                os.path.dirname(
+                    os.path.dirname(__file__)
+                    )
+                ),
+            "examples/pingpong_app/pingpong.thrift"),
+        "pingpong_thrift")
     service = thrift_service.PingService
     service.AboutToShutDownException = \
         thrift_service.AboutToShutDownException
@@ -45,7 +53,7 @@ def pingpong_thrift_client(request, pingpong_service_key,
     port = random.randint(55536, 65536)
     config_path = os.path.abspath(__file__)
     gunicorn_server = subprocess.Popen(
-        ["gunicorn_thrift", "pingpong_app.app:app",
+        ["gunicorn_thrift", "examples.pingpong_app.app:app",
             "-c", config_path, "--bind", "0.0.0.0:%s" % port]
         )
 
