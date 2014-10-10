@@ -7,8 +7,8 @@ import signal
 
 import pytest
 
-from thrift_connector import ClientPool, connction_class
-from thrift.transport.TTransport import TTransportException
+from thrift_connector import ClientPool
+from thriftpy.transport import TTransportException
 
 
 @pytest.fixture
@@ -37,30 +37,6 @@ def init_pingpong_pool(request, pingpong_service_key, pingpong_thrift_client):
         pool.connections = set()
 
     request.addfinalizer(reset_pool)
-
-
-@pytest.fixture
-def register_with_pool_manager(
-        request, pingpong_thrift_client, pingpong_service_key,
-        pingpong_thrift_service):
-    from zeus.core.client import make_client
-    pool_manager.add_connection_pool(
-        pingpong_thrift_client.service,
-        pingpong_thrift_client.host,
-        pingpong_thrift_client.port,
-        name=pingpong_service_key,
-        )
-
-    def client(
-            service=pingpong_thrift_service, host=pingpong_thrift_client.host,
-            port=pingpong_thrift_client.port, timeout=30):
-        return make_client(service, host, port)
-
-    def remove():
-        pool_manager.connection_pools = {}
-
-    request.addfinalizer(remove)
-    return client
 
 
 def test_client_pool(pingpong_thrift_client):
@@ -183,39 +159,6 @@ def test_ttronsport_exception_not_put_back(
         c.ping()
 
 
-def test_connection_pool_manager(
-        pingpong_thrift_client, register_with_pool_manager,
-        pingpong_service_key):
-    pool = pool_manager[pingpong_service_key]
-    pool.ping()
-
-    assert pool.service == pingpong_thrift_client.service
-    assert pool.host == pingpong_thrift_client.host
-    assert pool.port == pingpong_thrift_client.port
-    assert pool.name == pingpong_thrift_client.pool.name
-    assert pool.connction_class == pingpong_thrift_client.pool.connction_class
-
-
-def test_non_configured_client_should_be_temporarily_produced(
-        pingpong_thrift_client, pingpong_service_key, init_pingpong_pool,
-        register_with_pool_manager
-        ):
-    pool = pool_manager[pingpong_service_key]
-
-    client = register_with_pool_manager
-    # configured host is localhost
-    with client(host='127.0.0.1') as c:
-        c.ping()
-
-    assert len(pool.connections) == 0
-
-    # configured host is localhost
-    with client() as c:
-        c.ping()
-
-    assert len(pool.connections) == 1
-
-
 def test_setted_connection_pool_connection_keepalive(
         pingpong_thrift_client, pingpong_service_key, pingpong_thrift_service,
         fake_time):
@@ -225,7 +168,8 @@ def test_setted_connection_pool_connection_keepalive(
         pingpong_thrift_client.host,
         pingpong_thrift_client.port,
         name=pingpong_service_key,
-        raise_empty=False, max_conn=3, connction_class=connction_class,
+        raise_empty=False, max_conn=3,
+        connction_class=pingpong_thrift_client.pool.connction_class,
         keepalive=keep_alive
         )
     assert pool.keepalive == keep_alive
@@ -254,7 +198,8 @@ def test_not_setted_connection_pool_connection_keepalive(
         pingpong_thrift_client.host,
         pingpong_thrift_client.port,
         name=pingpong_service_key,
-        raise_empty=False, max_conn=3, connction_class=connction_class,
+        raise_empty=False, max_conn=3,
+        connction_class=pingpong_thrift_client.pool.connction_class,
         )
     assert pool.keepalive is None
     with pool.connection_ctx() as conn:

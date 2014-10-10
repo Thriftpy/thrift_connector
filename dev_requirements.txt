@@ -1,7 +1,13 @@
-dev_requirements.txt
-
-:Author: WooParadog
-:Email: guohaochuan@gmail.com
-:Date: 2014-10-10 11:59
-
-
+flake8==2.2.4
+gevent==1.0.1
+greenlet==0.4.4
+gunicorn==19.1.1
+gunicorn-thrift==0.0.8
+mccabe==0.2.1
+pep8==1.5.7
+py==1.4.25
+pyflakes==0.8.1
+pytest==2.6.3
+setproctitle==1.1.8
+thrift==0.9.1
+wsgiref==0.1.2
