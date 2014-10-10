@@ -25,7 +25,7 @@ port
 [max_conn]
     Number of connections to manage in pool.
 [connction_class]
-    Connection class implementation. Builtin classes are: `ThriftClient` for native thrift, `ThriftPyClient` and `ThriftPyCyClient` for thriftpy, the latter one utilize Cython for better performance.
+    Connection class implementation. Builtin classes are: `ThriftClient` for native thrift, `ThriftPyClient` and `ThriftPyCyClient` for thriftpy, the latter one utilizes Cython for better performance.
 [keepalive]
     Seconds each connection is able to stay alive. If oen connection has lived longer than this period, it will be closed.
 
