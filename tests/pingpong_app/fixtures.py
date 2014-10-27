@@ -45,7 +45,7 @@ class TestServerInfo(object):
 def pingpong_thrift_client(request, pingpong_service_key,
                            pingpong_thrift_service):
     port = random.randint(55536, 65536)
-    config_path = "./examples/gunicorn_config.py"
+    config_path = "examples/gunicorn_config.py"
     gunicorn_server = subprocess.Popen(
         ["gunicorn_thrift", "examples.pingpong_app.app:app",
             "-c", config_path, "--bind", "0.0.0.0:%s" % port]

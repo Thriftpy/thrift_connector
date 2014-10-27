@@ -191,16 +191,16 @@ class ClientPool(object):
         return self.get_client_from_pool() or self.produce_client()
 
     def __getattr__(self, name):
-        client = self.get_client()
-        api = getattr(client, name, None)
-        if name not in client.__dict__ and callable(api):
-            def call(*args, **kwds):
-                ret = api(*args, **kwds)
+        def call(*args, **kwds):
+            client = self.get_client()
+            api = getattr(client, name, None)
+            try:
+                if api and callable(api):
+                    return api(*args, **kwds)
+                raise AttributeError("%s not found in %s" % (name, client))
+            finally:
                 self.put_back_connection(client)
-                return ret
-            return call
-        self.put_back_connection(client)
-        raise AttributeError("%s not found in %s" % (name, client))
+        return call
 
     @contextlib.contextmanager
     def connection_ctx(self):
