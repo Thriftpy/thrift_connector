@@ -159,6 +159,14 @@ class ClientPool(object):
             self.keys()
             )
 
+    def close(self):
+        for c in self.connections:
+            c.close()
+
+    def set_service_uri(self, host, port):
+        self.host = host
+        self.port = port
+
     def get_client_from_pool(self):
         if not self.connections:
             if self.raise_empty:
