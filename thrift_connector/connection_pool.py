@@ -159,7 +159,7 @@ class ClientPool(object):
             self.keys()
             )
 
-    def close(self):
+    def clear(self):
         for c in self.connections:
             c.close()
 
