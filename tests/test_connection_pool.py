@@ -190,6 +190,7 @@ def test_setted_connection_pool_connection_keepalive(
         assert old_connection is not conn
 
 
+
 def test_not_setted_connection_pool_connection_keepalive(
         pingpong_thrift_client, pingpong_service_key, pingpong_thrift_service,
         fake_time):
@@ -217,3 +218,29 @@ def test_not_setted_connection_pool_connection_keepalive(
 
     with pool.connection_ctx() as conn:
         assert old_connection is conn
+
+
+def test_connection_pool_generation(
+        pingpong_thrift_client, pingpong_service_key, pingpong_thrift_service,
+        fake_time):
+    pool = ClientPool(
+        pingpong_thrift_service,
+        pingpong_thrift_client.host,
+        pingpong_thrift_client.port,
+        name=pingpong_service_key,
+        raise_empty=False, max_conn=3,
+        connction_class=pingpong_thrift_client.pool.connction_class,
+        )
+    c = pool.produce_client()
+    assert c.pool_generation == pool.generation == 0
+
+    pool.clear()
+
+    c2 = pool.produce_client()
+    assert c2.pool_generation == pool.generation == 1
+
+    pool.put_back_connection(c)
+    pool.put_back_connection(c2)
+
+    for c in pool.connections:
+        assert c.pool_generation == pool.generation

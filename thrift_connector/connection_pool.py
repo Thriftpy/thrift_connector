@@ -9,12 +9,14 @@ logger = logging.getLogger(__name__)
 
 class ThriftBaseClient(object):
 
-    def __init__(self, transport, protocol, client, keepalive=None):
+    def __init__(self, transport, protocol, client, keepalive=None,
+                 pool_generation=0):
         self.transport = transport
         self.protocol = protocol
         self.client = client
         self.alive_until = datetime.datetime.now() + \
             datetime.timedelta(seconds=keepalive) if keepalive else None
+        self.pool_generation = pool_generation
 
     def __repr__(self):
         return "<%s service=%s>" % (
@@ -44,7 +46,8 @@ class ThriftBaseClient(object):
             return False
 
     @classmethod
-    def connect(cls, service, host, port, timeout=30, keepalive=None):
+    def connect(cls, service, host, port, timeout=30, keepalive=None,
+                pool_generation=0):
         SOCKET = cls.get_socket_factory()(host, port)
         PROTO_FACTORY = cls.get_protoco_factory()
         TRANS_FACTORY = cls.get_transport_factory()
@@ -58,7 +61,8 @@ class ThriftBaseClient(object):
             transport=transport,
             protocol=protocol,
             client=cls.get_tclient(service, protocol),
-            keepalive=keepalive
+            keepalive=keepalive,
+            pool_generation=pool_generation
             )
 
     @property
@@ -172,7 +176,11 @@ class ClientPool(object):
             )
 
     def clear(self):
-        for c in self.connections:
+        old_connections = self.connections
+        self.connections = set()
+        self.generation += 1
+
+        for c in old_connections:
             c.close()
 
     def set_service_uri(self, host, port):
@@ -193,7 +201,8 @@ class ClientPool(object):
 
     def put_back_connection(self, conn):
         assert isinstance(conn, ThriftBaseClient)
-        if self.max_conn > 0 and len(self.connections) < self.max_conn:
+        if self.max_conn > 0 and len(self.connections) < self.max_conn and\
+                conn.pool_generation == self.generation:
             self.connections.add(conn)
         else:
             conn.close()
@@ -204,7 +213,8 @@ class ClientPool(object):
             self.host,
             self.port,
             self.timeout,
-            keepalive=self.keepalive
+            keepalive=self.keepalive,
+            pool_generation=self.generation
             )
 
     def get_client(self):
