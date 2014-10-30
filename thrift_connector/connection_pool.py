@@ -44,8 +44,22 @@ class ThriftBaseClient(object):
             return False
 
     @classmethod
-    def connect(cls, service, host, port, timeout=30):
-        raise NotImplementedError
+    def connect(cls, service, host, port, timeout=30, keepalive=None):
+        SOCKET = cls.get_socket_factory()(host, port)
+        PROTO_FACTORY = cls.get_protoco_factory()
+        TRANS_FACTORY = cls.get_transport_factory()
+
+        transport = TRANS_FACTORY(SOCKET)
+        protocol = PROTO_FACTORY(transport)
+
+        transport.open()
+
+        return cls(
+            transport=transport,
+            protocol=protocol,
+            client=cls.get_tclient(service, protocol),
+            keepalive=keepalive
+            )
 
     @property
     def TTransportException(self):
@@ -59,24 +73,23 @@ class ThriftClient(ThriftBaseClient):
         return TTransportException
 
     @classmethod
-    def connect(cls, service, host, port, timeout=30, keepalive=None):
-        from thrift.transport import TSocket
-        from thrift.transport import TTransport
+    def get_protoco_factory(self):
         from thrift.protocol import TBinaryProtocol
+        return TBinaryProtocol.TBinaryProtocolAccelerated
 
-        transport = TSocket.TSocket(host, port)
-        transport.setTimeout(timeout * 1000)
-        transport = TTransport.TBufferedTransport(transport)
-        protocol = TBinaryProtocol.TBinaryProtocolAccelerated(transport)
+    @classmethod
+    def get_transport_factory(self):
+        from thrift.transport import TTransport
+        return TTransport.TBufferedTransport
 
-        transport.open()
+    @classmethod
+    def get_tclient(self, service, protocol):
+        return service.Client(protocol)
 
-        return cls(
-            transport=transport,
-            protocol=protocol,
-            client=service.Client(protocol),
-            keepalive=keepalive
-            )
+    @classmethod
+    def get_socket_factory(self):
+        from thrift.transport import TSocket
+        return TSocket.TSocket
 
 
 class ThriftPyClient(ThriftBaseClient):
@@ -86,26 +99,24 @@ class ThriftPyClient(ThriftBaseClient):
         return TTransportException
 
     @classmethod
-    def connect(cls, service, host, port, timeout=30, keepalive=None):
-        from thriftpy.thrift import TClient
-        from thriftpy.transport import TSocket
+    def get_protoco_factory(self):
         from thriftpy.protocol import TBinaryProtocolFactory
+        return TBinaryProtocolFactory().get_protocol
+
+    @classmethod
+    def get_transport_factory(self):
         from thriftpy.transport import TBufferedTransportFactory
+        return TBufferedTransportFactory().get_transport
 
-        PROTO_FACTORY = TBinaryProtocolFactory
+    @classmethod
+    def get_tclient(self, service, protocol):
+        from thriftpy.thrift import TClient
+        return TClient(service, protocol)
 
-        TRANS_FACTORY = TBufferedTransportFactory
-
-        transport = TRANS_FACTORY().get_transport(TSocket(host, port))
-        protocol = PROTO_FACTORY().get_protocol(transport)
-        transport.open()
-
-        return cls(
-            transport=transport,
-            protocol=protocol,
-            client=TClient(service, protocol),
-            keepalive=keepalive
-            )
+    @classmethod
+    def get_socket_factory(self):
+        from thriftpy.transport import TSocket
+        return TSocket
 
 
 class ThriftPyCyClient(ThriftBaseClient):
@@ -115,24 +126,24 @@ class ThriftPyCyClient(ThriftBaseClient):
         return TTransportException
 
     @classmethod
-    def connect(cls, service, host, port, timeout=30, keepalive=None):
-        from thriftpy.thrift import TClient
-        from thriftpy.transport import TSocket
+    def get_protoco_factory(self):
         from thriftpy.protocol import TCyBinaryProtocolFactory
+        return TCyBinaryProtocolFactory().get_protocol
+
+    @classmethod
+    def get_transport_factory(self):
         from thriftpy.transport import TCyBufferedTransportFactory
+        return TCyBufferedTransportFactory().get_transport
 
-        PROTO_FACTORY = TCyBinaryProtocolFactory
-        TRANS_FACTORY = TCyBufferedTransportFactory
-        transport = TRANS_FACTORY().get_transport(TSocket(host, port))
-        protocol = PROTO_FACTORY().get_protocol(transport)
-        transport.open()
+    @classmethod
+    def get_tclient(self, service, protocol):
+        from thriftpy.thrift import TClient
+        return TClient(service, protocol)
 
-        return cls(
-            transport=transport,
-            protocol=protocol,
-            client=TClient(service, protocol),
-            keepalive=keepalive
-            )
+    @classmethod
+    def get_socket_factory(self):
+        from thriftpy.transport import TSocket
+        return TSocket
 
 
 class ClientPool(object):
@@ -149,6 +160,7 @@ class ClientPool(object):
         self.max_conn = max_conn
         self.connction_class = connction_class
         self.keepalive = keepalive
+        self.generation = 0
 
     def keys(self):
         return set([self.name, self.service.__name__])
