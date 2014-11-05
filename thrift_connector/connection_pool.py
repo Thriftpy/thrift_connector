@@ -3,13 +3,14 @@
 import logging
 import datetime
 import contextlib
+import random
 
 logger = logging.getLogger(__name__)
 
 
 class ThriftBaseClient(object):
 
-    def __init__(self, transport, protocol, client, keepalive=None,
+    def __init__(self, host, port, transport, protocol, client, keepalive=None,
                  pool_generation=0):
         self.transport = transport
         self.protocol = protocol
@@ -17,6 +18,8 @@ class ThriftBaseClient(object):
         self.alive_until = datetime.datetime.now() + \
             datetime.timedelta(seconds=keepalive) if keepalive else None
         self.pool_generation = pool_generation
+        self.host = host
+        self.port = port
 
     def __repr__(self):
         return "<%s service=%s>" % (
@@ -58,6 +61,8 @@ class ThriftBaseClient(object):
         transport.open()
 
         return cls(
+            host=host,
+            port=port,
             transport=transport,
             protocol=protocol,
             client=cls.get_tclient(service, protocol),
@@ -150,13 +155,11 @@ class ThriftPyCyClient(ThriftBaseClient):
         return TSocket
 
 
-class ClientPool(object):
-    def __init__(self, service, host, port, timeout=30, name=None,
+class BaseClientPool(object):
+    def __init__(self, service, timeout=30, name=None,
                  raise_empty=False, max_conn=30, connction_class=ThriftClient,
                  keepalive=None):
         self.service = service
-        self.host = host
-        self.port = port
         self.timeout = timeout
         self.name = name or service.__name__
         self.connections = set()
@@ -183,10 +186,6 @@ class ClientPool(object):
         for c in old_connections:
             c.close()
 
-    def set_service_uri(self, host, port):
-        self.host = host
-        self.port = port
-
     def get_client_from_pool(self):
         if not self.connections:
             if self.raise_empty:
@@ -208,10 +207,11 @@ class ClientPool(object):
             conn.close()
 
     def produce_client(self):
+        host, port = self.yield_server()
         return self.connction_class.connect(
             self.service,
-            self.host,
-            self.port,
+            host,
+            port,
             self.timeout,
             keepalive=self.keepalive,
             pool_generation=self.generation
@@ -244,3 +244,70 @@ class ClientPool(object):
         except Exception:
             self.put_back_connection(client)
             raise
+
+
+class ClientPool(BaseClientPool):
+    def __init__(self, service, host, port, timeout=30, name=None,
+                 raise_empty=False, max_conn=30, connction_class=ThriftClient,
+                 keepalive=None):
+        super(ClientPool, self).__init__(
+            service=service,
+            timeout=timeout,
+            name=name,
+            raise_empty=raise_empty,
+            max_conn=max_conn,
+            connction_class=connction_class,
+            keepalive=keepalive
+            )
+        self.host = host
+        self.port = port
+
+    def set_servers(self, server_info):
+        host, port = server_info
+        self.host = host
+        self.port = port
+
+    def yield_server(self):
+        return self.host, self.port
+
+
+class MultiServerClientBase(ClientPool):
+    def __init__(self, service, servers, timeout=30, name=None,
+                 raise_empty=False, max_conn=30, connction_class=ThriftClient,
+                 keepalive=None):
+        super(ClientPool, self).__init__(
+            service=service,
+            timeout=timeout,
+            name=name,
+            raise_empty=raise_empty,
+            max_conn=max_conn,
+            connction_class=connction_class,
+            keepalive=keepalive
+            )
+
+        self.servers = servers
+
+    def set_servers(self, server_info):
+        for i in server_info:
+            assert len(i) == 2
+        self.servers = server_info
+
+
+class RandomMultiServerClient(MultiServerClientBase):
+    def yield_server(self):
+        assert len(self.servers) > 0
+        return random.choice(self.servers)
+
+
+class RoundRobinMultiServerClient(MultiServerClientBase):
+    def __init__(self, *args, **kwds):
+        super(RoundRobinMultiServerClient, self).__init__(*args, **kwds)
+        self.index = 0
+
+    def yield_server(self):
+        assert len(self.servers) > 0
+        if self.index >= len(self.servers):
+            self.index = 0
+        ret = self.servers[self.index]
+        self.index += 1
+        return ret

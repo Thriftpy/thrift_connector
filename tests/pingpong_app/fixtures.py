@@ -33,22 +33,25 @@ def pingpong_thrift_service(request, pingpong_service_key):
 
 
 class TestServerInfo(object):
-    def __init__(self, host, port, process, pool, service):
+    def __init__(self, host, port, process, pool, service, port2):
         self.host = host
         self.port = port
         self.process = process
         self.pool = pool
         self.service = service
+        self.port2 = port2
 
 
 @pytest.fixture(scope="session")
 def pingpong_thrift_client(request, pingpong_service_key,
                            pingpong_thrift_service):
     port = random.randint(55536, 65536)
+    port2 = random.randint(35536, 45536)
     config_path = "examples/gunicorn_config.py"
     gunicorn_server = subprocess.Popen(
         ["gunicorn_thrift", "examples.pingpong_app.app:app",
-            "-c", config_path, "--bind", "0.0.0.0:%s" % port]
+            "-c", config_path, "--bind", "0.0.0.0:%s" % port,
+            "--bind", "0.0.0.0:%s" % port2, ]
         )
 
     def shutdown():
@@ -72,7 +75,8 @@ def pingpong_thrift_client(request, pingpong_service_key,
         port,
         gunicorn_server,
         pool,
-        pingpong_thrift_service
+        pingpong_thrift_service,
+        port2=port2
         )
 
 

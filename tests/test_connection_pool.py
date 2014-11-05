@@ -7,7 +7,8 @@ import signal
 
 import pytest
 
-from thrift_connector import ClientPool
+from thrift_connector import ClientPool, RoundRobinMultiServerClient, \
+    RandomMultiServerClient
 from thriftpy.transport import TTransportException
 
 
@@ -97,6 +98,7 @@ def test_client_pool_overflow(
 
     for n, c in enumerate(available_clients[:pool.max_conn]):
         if n > pool.max_conn - 1:
+            # Overflown connections should be closed after use.
             with pytest.raises(TTransportException):
                 c.ping()
         else:
@@ -190,7 +192,6 @@ def test_setted_connection_pool_connection_keepalive(
         assert old_connection is not conn
 
 
-
 def test_not_setted_connection_pool_connection_keepalive(
         pingpong_thrift_client, pingpong_service_key, pingpong_thrift_service,
         fake_time):
@@ -244,3 +245,55 @@ def test_connection_pool_generation(
 
     for c in pool.connections:
         assert c.pool_generation == pool.generation
+
+
+def test_random_multiconnection_pool(
+        pingpong_thrift_client, pingpong_service_key, pingpong_thrift_service,
+        fake_time):
+    servers = [
+        (pingpong_thrift_client.host, pingpong_thrift_client.port),
+        (pingpong_thrift_client.host, pingpong_thrift_client.port2),
+        ]
+
+    random_pool = RandomMultiServerClient(
+        pingpong_thrift_service,
+        servers=servers,
+        name=pingpong_service_key,
+        raise_empty=False, max_conn=3,
+        connction_class=pingpong_thrift_client.pool.connction_class,
+        )
+
+    with random_pool.connection_ctx() as conn:
+        assert conn.test_connection()
+
+
+def test_roundrobin_multiconnection_pool(
+        pingpong_thrift_client, pingpong_service_key, pingpong_thrift_service,
+        fake_time):
+    servers = [
+        (pingpong_thrift_client.host, pingpong_thrift_client.port),
+        (pingpong_thrift_client.host, pingpong_thrift_client.port2),
+        ]
+
+    roundrobin_pool = RoundRobinMultiServerClient(
+        pingpong_thrift_service,
+        servers=servers,
+        name=pingpong_service_key,
+        raise_empty=False, max_conn=3,
+        connction_class=pingpong_thrift_client.pool.connction_class,
+        )
+
+    conn1 = roundrobin_pool.produce_client()
+    assert conn1.test_connection()
+
+    conn2 = roundrobin_pool.produce_client()
+    assert conn2.test_connection()
+    assert (conn1.host, conn1.port) != (conn2.host, conn2.port)
+
+    conn3 = roundrobin_pool.produce_client()
+    assert (conn1.host, conn1.port) == (conn3.host, conn3.port)
+    assert (conn2.host, conn2.port) != (conn3.host, conn3.port)
+
+    conn4 = roundrobin_pool.produce_client()
+    assert (conn1.host, conn1.port) != (conn4.host, conn4.port)
+    assert (conn2.host, conn2.port) == (conn4.host, conn4.port)
