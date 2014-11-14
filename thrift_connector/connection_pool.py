@@ -303,6 +303,8 @@ class RoundRobinMultiServerClient(MultiServerClientBase):
     def __init__(self, *args, **kwds):
         super(RoundRobinMultiServerClient, self).__init__(*args, **kwds)
         self.index = 0
+        self.servers = list(self.servers)
+        random.shuffle(self.servers)
 
     def yield_server(self):
         assert len(self.servers) > 0
