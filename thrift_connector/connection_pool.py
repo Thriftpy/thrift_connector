@@ -4,6 +4,8 @@ import logging
 import datetime
 import contextlib
 import random
+import thread
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -178,6 +180,9 @@ class BaseClientPool(object):
             self.keys()
             )
 
+    def pool_size(self):
+        return len(self.connections)
+
     def clear(self):
         old_connections = self.connections
         self.connections = set()
@@ -203,8 +208,10 @@ class BaseClientPool(object):
         if self.max_conn > 0 and len(self.connections) < self.max_conn and\
                 conn.pool_generation == self.generation:
             self.connections.add(conn)
+            return True
         else:
             conn.close()
+            return False
 
     def produce_client(self):
         host, port = self.yield_server()
@@ -269,6 +276,76 @@ class ClientPool(BaseClientPool):
 
     def yield_server(self):
         return self.host, self.port
+
+
+class HeartbeatClientPool(ClientPool):
+
+    def __init__(self, service, host, port, timeout=30, name=None,
+                 raise_empty=False, max_conn=30, connction_class=ThriftClient,
+                 keepalive=None):
+        super(HeartbeatClientPool, self).__init__(
+            service=service,
+            host=host,
+            port=port,
+            timeout=timeout,
+            name=name,
+            raise_empty=raise_empty,
+            max_conn=max_conn,
+            connction_class=connction_class,
+            keepalive=keepalive
+            )
+        self.host = host
+        self.port = port
+        thread.start_new_thread(self.maintain_connections, tuple())
+
+    def _close_and_remove_client(self, client):
+        if client not in self.connections:
+            return
+
+        try:
+            self.connections.remove(client)
+            client.close()
+        except KeyError as e:
+            logger.warn('Error removing client from pool %s, %s',
+                        self.service.__name__, e)
+        except Exception as e:
+            logger.warn('Error closing client %s, %s',
+                        self.service.__name__, e)
+
+    def get_client_from_pool(self):
+        # override, do not test connection before returning client
+        if not self.connections:
+            if self.raise_empty:
+                raise self.Empty
+            return
+
+        connection = self.connections.pop()
+        return connection
+
+    def maintain_connections(self):
+        while True:
+            time.sleep(min([self.timeout, self.timeout - 1]))
+
+            if self.pool_size() == 0:
+                # do not check when pool is empty
+                return
+
+            iter_list = [x for x in self.connections]
+
+            for client in iter_list:
+                if client.is_expired():
+                    self._close_and_remove_client(client)
+                    continue
+
+                try:
+                    client.ping()
+                except Exception as e:
+                    logger.warn(
+                        'Error sending heartbeat: %s, %s',
+                        self.service.__name__, e
+                        )
+                    self._close_and_remove_client(client)
+                    continue
 
 
 class MultiServerClientBase(ClientPool):
