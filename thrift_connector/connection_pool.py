@@ -208,8 +208,10 @@ class BaseClientPool(object):
         if self.max_conn > 0 and len(self.connections) < self.max_conn and\
                 conn.pool_generation == self.generation:
             self.connections.add(conn)
+            return True
         else:
             conn.close()
+            return False
 
     def produce_client(self):
         host, port = self.yield_server()
@@ -322,7 +324,7 @@ class HeartbeatClientPool(ClientPool):
 
     def maintain_connections(self):
         while True:
-            time.sleep(self.timeout)
+            time.sleep(min([self.timeout, self.timeout - 1]))
 
             if self.pool_size() == 0:
                 # do not check when pool is empty

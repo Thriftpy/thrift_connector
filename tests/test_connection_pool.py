@@ -321,7 +321,7 @@ def test_heartbeat_client_pool(
     # this call should fail
     disconnected_client = heartbeat_pool.get_client()
     assert not disconnected_client.test_connection()
-    heartbeat_pool.put_back_connection(disconnected_client)
+    assert heartbeat_pool.put_back_connection(disconnected_client)
 
     time.sleep(3)
     # disconnection should be detected and dead clients removed
