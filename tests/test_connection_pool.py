@@ -8,7 +8,7 @@ import signal
 import pytest
 
 from thrift_connector import ClientPool, RoundRobinMultiServerClient, \
-    RandomMultiServerClient
+    RandomMultiServerClient, HeartbeatClientPool
 from thriftpy.transport import TTransportException
 
 
@@ -297,3 +297,33 @@ def test_roundrobin_multiconnection_pool(
     conn4 = roundrobin_pool.produce_client()
     assert (conn1.host, conn1.port) != (conn4.host, conn4.port)
     assert (conn2.host, conn2.port) == (conn4.host, conn4.port)
+
+
+def test_heartbeat_client_pool(
+        pingpong_thrift_client, pingpong_service_key, pingpong_thrift_service,
+        fake_time):
+    heartbeat_pool = HeartbeatClientPool(
+        pingpong_thrift_service,
+        host=pingpong_thrift_client.host,
+        port=pingpong_thrift_client.port,
+        timeout=3,
+        connction_class=pingpong_thrift_client.pool.connction_class,
+        max_conn=1
+    )
+
+    conn1 = heartbeat_pool.get_client()
+    assert conn1.test_connection()
+
+    # now we kill client and put back to pool
+    conn1.close()
+    heartbeat_pool.put_back_connection(conn1)
+
+    # this call should fail
+    disconnected_client = heartbeat_pool.get_client()
+    assert not disconnected_client.test_connection()
+    heartbeat_pool.put_back_connection(disconnected_client)
+
+    time.sleep(3)
+    # disconnection should be detected and dead clients removed
+    new_client = heartbeat_pool.get_client()
+    assert new_client.test_connection()
