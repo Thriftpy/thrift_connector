@@ -324,7 +324,7 @@ class HeartbeatClientPool(ClientPool):
 
     def maintain_connections(self):
         while True:
-            time.sleep(min([self.timeout, self.timeout - 1]))
+            time.sleep(max([1, self.timeout - 1]))
 
             if self.pool_size() == 0:
                 # do not check when pool is empty
