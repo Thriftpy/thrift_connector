@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 # package meta info
 NAME = "thrift_connector"
-VERSION = "0.5"
+VERSION = "0.6"
 DESCRIPTION = "Lib to connect to thrift services with pools"
 AUTHOR = "Haochuan Guo"
 AUTHOR_EMAIL = "guohaochuan@gmail.com"
