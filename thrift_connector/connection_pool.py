@@ -11,18 +11,19 @@ logger = logging.getLogger(__name__)
 
 
 class ThriftBaseClient(object):
-
-    def __init__(self, host, port, transport, protocol, client, keepalive=None,
-                 pool_generation=0, tracking=False):
+    def __init__(self, host, port, transport, protocol, service,
+                 keepalive=None, pool_generation=0, tracking=False):
+        self.host = host
+        self.port = port
         self.transport = transport
         self.protocol = protocol
-        self.client = client
+        self.service = service
         self.alive_until = datetime.datetime.now() + \
             datetime.timedelta(seconds=keepalive) if keepalive else None
         self.pool_generation = pool_generation
-        self.host = host
-        self.port = port
         self.tracking = tracking
+
+        self.client = self.get_tclient(service, protocol)
 
     def __repr__(self):
         return "<%s service=%s>" % (
@@ -68,7 +69,7 @@ class ThriftBaseClient(object):
             port=port,
             transport=transport,
             protocol=protocol,
-            client=cls.get_tclient(service, protocol),
+            service=service,
             keepalive=keepalive,
             pool_generation=pool_generation,
             tracking=tracking
@@ -95,7 +96,6 @@ class ThriftClient(ThriftBaseClient):
         from thrift.transport import TTransport
         return TTransport.TBufferedTransport
 
-    @classmethod
     def get_tclient(self, service, protocol):
         if self.tracking is True:
             raise NotImplementedError(
@@ -124,7 +124,6 @@ class ThriftPyClient(ThriftBaseClient):
         from thriftpy.transport import TBufferedTransportFactory
         return TBufferedTransportFactory().get_transport
 
-    @classmethod
     def get_tclient(self, service, protocol):
         if self.tracking is True:
             from thriftpy.thrift import TTrackedClient as TClient
@@ -154,7 +153,6 @@ class ThriftPyCyClient(ThriftBaseClient):
         from thriftpy.transport import TCyBufferedTransportFactory
         return TCyBufferedTransportFactory().get_transport
 
-    @classmethod
     def get_tclient(self, service, protocol):
         if self.tracking is True:
             from thriftpy.thrift import TTrackedClient as TClient
@@ -365,7 +363,7 @@ class MultiServerClientBase(ClientPool):
     def __init__(self, service, servers, timeout=30, name=None,
                  raise_empty=False, max_conn=30, connction_class=ThriftClient,
                  keepalive=None, tracking=False):
-        super(ClientPool, self).__init__(
+        super(MultiServerClientBase, self).__init__(
             service=service,
             timeout=timeout,
             name=name,
