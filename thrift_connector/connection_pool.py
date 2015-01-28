@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class ThriftBaseClient(object):
 
     def __init__(self, host, port, transport, protocol, client, keepalive=None,
-                 pool_generation=0):
+                 pool_generation=0, tracking=False):
         self.transport = transport
         self.protocol = protocol
         self.client = client
@@ -22,6 +22,7 @@ class ThriftBaseClient(object):
         self.pool_generation = pool_generation
         self.host = host
         self.port = port
+        self.tracking = tracking
 
     def __repr__(self):
         return "<%s service=%s>" % (
@@ -52,7 +53,7 @@ class ThriftBaseClient(object):
 
     @classmethod
     def connect(cls, service, host, port, timeout=30, keepalive=None,
-                pool_generation=0):
+                pool_generation=0, tracking=False):
         SOCKET = cls.get_socket_factory()(host, port)
         PROTO_FACTORY = cls.get_protoco_factory()
         TRANS_FACTORY = cls.get_transport_factory()
@@ -69,7 +70,8 @@ class ThriftBaseClient(object):
             protocol=protocol,
             client=cls.get_tclient(service, protocol),
             keepalive=keepalive,
-            pool_generation=pool_generation
+            pool_generation=pool_generation,
+            tracking=tracking
             )
 
     @property
@@ -95,6 +97,9 @@ class ThriftClient(ThriftBaseClient):
 
     @classmethod
     def get_tclient(self, service, protocol):
+        if self.tracking is True:
+            raise NotImplementedError(
+                "%s doesn't support tracking" % self.__class__.__name__)
         return service.Client(protocol)
 
     @classmethod
@@ -121,7 +126,10 @@ class ThriftPyClient(ThriftBaseClient):
 
     @classmethod
     def get_tclient(self, service, protocol):
-        from thriftpy.thrift import TClient
+        if self.tracking is True:
+            from thriftpy.thrift import TTrackedClient as TClient
+        else:
+            from thriftpy.thrift import TClient
         return TClient(service, protocol)
 
     @classmethod
@@ -148,7 +156,10 @@ class ThriftPyCyClient(ThriftBaseClient):
 
     @classmethod
     def get_tclient(self, service, protocol):
-        from thriftpy.thrift import TClient
+        if self.tracking is True:
+            from thriftpy.thrift import TTrackedClient as TClient
+        else:
+            from thriftpy.thrift import TClient
         return TClient(service, protocol)
 
     @classmethod
@@ -160,7 +171,7 @@ class ThriftPyCyClient(ThriftBaseClient):
 class BaseClientPool(object):
     def __init__(self, service, timeout=30, name=None,
                  raise_empty=False, max_conn=30, connction_class=ThriftClient,
-                 keepalive=None):
+                 keepalive=None, tracking=False):
         self.service = service
         self.timeout = timeout
         self.name = name or service.__name__
@@ -170,6 +181,7 @@ class BaseClientPool(object):
         self.connction_class = connction_class
         self.keepalive = keepalive
         self.generation = 0
+        self.tracking = tracking
 
     def keys(self):
         return set([self.name, self.service.__name__])
@@ -221,7 +233,8 @@ class BaseClientPool(object):
             port,
             self.timeout,
             keepalive=self.keepalive,
-            pool_generation=self.generation
+            pool_generation=self.generation,
+            tracking=self.tracking
             )
 
     def get_client(self):
@@ -351,7 +364,7 @@ class HeartbeatClientPool(ClientPool):
 class MultiServerClientBase(ClientPool):
     def __init__(self, service, servers, timeout=30, name=None,
                  raise_empty=False, max_conn=30, connction_class=ThriftClient,
-                 keepalive=None):
+                 keepalive=None, tracking=False):
         super(ClientPool, self).__init__(
             service=service,
             timeout=timeout,
@@ -359,7 +372,8 @@ class MultiServerClientBase(ClientPool):
             raise_empty=raise_empty,
             max_conn=max_conn,
             connction_class=connction_class,
-            keepalive=keepalive
+            keepalive=keepalive,
+            tracking=tracking
             )
 
         self.servers = servers
