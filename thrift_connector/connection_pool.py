@@ -272,6 +272,28 @@ class BaseClientPool(object):
             self.put_back_connection(client)
             raise
 
+    @contextlib.contextmanager
+    def make_temporary_client(self, service, host, port, timeout,
+                              cybinary=False):
+        from thriftpy.rpc import client_context
+        from thriftpy.protocol import (
+            TBinaryProtocolFactory, TCyBinaryProtocolFactory
+            )
+        from thriftpy.transport import (
+            TBufferedTransportFactory,
+            TCyBufferedTransportFactory,
+        )
+
+        PROTO_FACTORY = TCyBinaryProtocolFactory if cybinary \
+            else TBinaryProtocolFactory
+        TRANS_FACTORY = TCyBufferedTransportFactory if cybinary \
+            else TBufferedTransportFactory
+        with client_context(service, host, port,
+                            proto_factory=PROTO_FACTORY(),
+                            trans_factory=TRANS_FACTORY(),
+                            timeout=timeout * 1000) as client:
+            yield client
+
 
 class ClientPool(BaseClientPool):
     def __init__(self, service, host, port, timeout=30, name=None,
