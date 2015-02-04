@@ -171,7 +171,7 @@ def test_setted_connection_pool_connection_keepalive(
         pingpong_thrift_client.port,
         name=pingpong_service_key,
         raise_empty=False, max_conn=3,
-        connction_class=pingpong_thrift_client.pool.connction_class,
+        connection_class=pingpong_thrift_client.pool.connection_class,
         keepalive=keep_alive
         )
     assert pool.keepalive == keep_alive
@@ -201,7 +201,7 @@ def test_not_setted_connection_pool_connection_keepalive(
         pingpong_thrift_client.port,
         name=pingpong_service_key,
         raise_empty=False, max_conn=3,
-        connction_class=pingpong_thrift_client.pool.connction_class,
+        connection_class=pingpong_thrift_client.pool.connection_class,
         )
     assert pool.keepalive is None
     with pool.connection_ctx() as conn:
@@ -230,7 +230,7 @@ def test_connection_pool_generation(
         pingpong_thrift_client.port,
         name=pingpong_service_key,
         raise_empty=False, max_conn=3,
-        connction_class=pingpong_thrift_client.pool.connction_class,
+        connection_class=pingpong_thrift_client.pool.connection_class,
         )
     c = pool.produce_client()
     assert c.pool_generation == pool.generation == 0
@@ -260,7 +260,7 @@ def test_random_multiconnection_pool(
         servers=servers,
         name=pingpong_service_key,
         raise_empty=False, max_conn=3,
-        connction_class=pingpong_thrift_client.pool.connction_class,
+        connection_class=pingpong_thrift_client.pool.connection_class,
         )
 
     with random_pool.connection_ctx() as conn:
@@ -280,7 +280,7 @@ def test_roundrobin_multiconnection_pool(
         servers=servers,
         name=pingpong_service_key,
         raise_empty=False, max_conn=3,
-        connction_class=pingpong_thrift_client.pool.connction_class,
+        connection_class=pingpong_thrift_client.pool.connection_class,
         )
 
     conn1 = roundrobin_pool.produce_client()
@@ -307,7 +307,7 @@ def test_heartbeat_client_pool(
         host=pingpong_thrift_client.host,
         port=pingpong_thrift_client.port,
         timeout=3,
-        connction_class=pingpong_thrift_client.pool.connction_class,
+        connection_class=pingpong_thrift_client.pool.connection_class,
         max_conn=1
     )
 
