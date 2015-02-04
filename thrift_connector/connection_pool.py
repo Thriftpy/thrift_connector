@@ -78,6 +78,10 @@ class ThriftBaseClient(object):
     def test_connection(self):
         self._connection.test_connection()
 
+    @property
+    def alive_until(self):
+        return self._connection.alive_until
+
     @classmethod
     def connect(cls, service, host, port, timeout=30, keepalive=None,
                 pool_generation=0, tracking=False, tracker_factory=None):
