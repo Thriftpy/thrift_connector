@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 
-from connection_pool import ClientPool, ThriftClient, ThriftPyClient, \
-    ThriftPyCyClient, RandomMultiServerClient, RoundRobinMultiServerClient, \
+from connection_pool import ClientPool, ClientPoolMux, ThriftClient, \
+    ThriftPyClient, ThriftPyCyClient, ThriftClientMux, \
+    RandomMultiServerClient, RoundRobinMultiServerClient, \
     HeartbeatClientPool
 
-__all__ = [ClientPool, ThriftClient, ThriftPyClient, ThriftPyCyClient,
+__all__ = [ClientPool, ClientPoolMux, ThriftClient, ThriftPyClient,
+           ThriftPyCyClient, ThriftClientMux, 
            RandomMultiServerClient, RoundRobinMultiServerClient,
            HeartbeatClientPool]
