@@ -67,7 +67,7 @@ def pingpong_thrift_client(request, pingpong_service_key,
         'localhost',
         port,
         name=pingpong_service_key,
-        connction_class=ThriftPyCyClient
+        connection_class=ThriftPyCyClient
         )
 
     return TestServerInfo(
