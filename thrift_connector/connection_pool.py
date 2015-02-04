@@ -234,9 +234,12 @@ class BaseClientPool(object):
     def produce_client(self, host=None, port=None):
         if host is None and port is None:
             host, port = self.yield_server()
-        else:
+        elif host is not None and port is not None:
             host = host
             port = port
+        else:
+            raise ValueError("host and port should be 'both none' \
+                             or 'both provided' ")
         return self.connction_class.connect(
             self.service,
             host,
