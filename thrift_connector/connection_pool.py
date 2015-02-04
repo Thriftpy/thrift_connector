@@ -231,8 +231,12 @@ class BaseClientPool(object):
             conn.close()
             return False
 
-    def produce_client(self):
-        host, port = self.yield_server()
+    def produce_client(self, host=None, port=None):
+        if host is None and port is None:
+            host, port = self.yield_server()
+        else:
+            host = host
+            port = port
         return self.connction_class.connect(
             self.service,
             host,
@@ -273,26 +277,13 @@ class BaseClientPool(object):
             raise
 
     @contextlib.contextmanager
-    def make_temporary_client(self, service, host, port, timeout,
-                              cybinary=False):
-        from thriftpy.rpc import client_context
-        from thriftpy.protocol import (
-            TBinaryProtocolFactory, TCyBinaryProtocolFactory
-            )
-        from thriftpy.transport import (
-            TBufferedTransportFactory,
-            TCyBufferedTransportFactory,
-        )
-
-        PROTO_FACTORY = TCyBinaryProtocolFactory if cybinary \
-            else TBinaryProtocolFactory
-        TRANS_FACTORY = TCyBufferedTransportFactory if cybinary \
-            else TBufferedTransportFactory
-        with client_context(service, host, port,
-                            proto_factory=PROTO_FACTORY(),
-                            trans_factory=TRANS_FACTORY(),
-                            timeout=timeout * 1000) as client:
+    def make_temporary_client(self, host, port):
+        client = self.produce_client(host, port)
+        try:
             yield client
+        except Exception:
+            client.close()
+            raise
 
 
 class ClientPool(BaseClientPool):
