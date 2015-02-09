@@ -231,8 +231,12 @@ class BaseClientPool(object):
             conn.close()
             return False
 
-    def produce_client(self):
-        host, port = self.yield_server()
+    def produce_client(self, host=None, port=None):
+        if host is None and port is None:
+            host, port = self.yield_server()
+        elif not all((host, port)):
+            raise ValueError("host and port should be 'both none' \
+                             or 'both provided' ")
         return self.connction_class.connect(
             self.service,
             host,
@@ -271,6 +275,16 @@ class BaseClientPool(object):
         except Exception:
             self.put_back_connection(client)
             raise
+
+    @contextlib.contextmanager
+    def make_temporary_client(self, host, port):
+        client = self.produce_client(host, port)
+        try:
+            yield client
+        except Exception:
+            raise
+        finally:
+            client.close()
 
 
 class ClientPool(BaseClientPool):
