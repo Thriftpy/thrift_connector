@@ -332,8 +332,6 @@ class HeartbeatClientPool(ClientPool):
             tracking=tracking,
             tracker_factory=tracker_factory
             )
-        self.host = host
-        self.port = port
         thread.start_new_thread(self.maintain_connections, tuple())
 
     def _close_and_remove_client(self, client):
@@ -361,29 +359,24 @@ class HeartbeatClientPool(ClientPool):
         return connection
 
     def maintain_connections(self):
+        sleep_time = max([1, self.timeout - 5])
         while True:
-            time.sleep(max([1, self.timeout - 1]))
+            time.sleep(sleep_time)
+            count = 0
+            pool_size = self.pool_size()
 
-            if self.pool_size() == 0:
-                # do not check when pool is empty
-                return
+            while count < pool_size:
+                conn = self.get_client_from_pool()
 
-            iter_list = [x for x in self.connections]
+                if conn is None:
+                    break
 
-            for client in iter_list:
-                if client.is_expired():
-                    self._close_and_remove_client(client)
-                    continue
+                count += 1
 
-                try:
-                    client.ping()
-                except Exception as e:
-                    logger.warn(
-                        'Error sending heartbeat: %s, %s',
-                        self.service.__name__, e
-                        )
-                    self._close_and_remove_client(client)
-                    continue
+                if conn.test_connection():
+                    self.put_back_connection(conn)
+                else:
+                    conn.close()
 
 
 class MultiServerClientBase(ClientPool):
