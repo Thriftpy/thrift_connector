@@ -58,6 +58,7 @@ class ThriftBaseClient(object):
     def connect(cls, service, host, port, timeout=30, keepalive=None,
                 pool_generation=0, tracking=False, tracker_factory=None):
         SOCKET = cls.get_socket_factory()(host, port)
+        cls.set_timeout(SOCKET, timeout * 1000)
         PROTO_FACTORY = cls.get_protoco_factory()
         TRANS_FACTORY = cls.get_transport_factory()
 
@@ -80,6 +81,25 @@ class ThriftBaseClient(object):
 
     @property
     def TTransportException(self):
+        raise NotImplementedError
+
+    @classmethod
+    def get_protoco_factory(self):
+        raise NotImplementedError
+
+    @classmethod
+    def get_transport_factory(self):
+        raise NotImplementedError
+
+    def get_tclient(self, service, protocol):
+        raise NotImplementedError
+
+    @classmethod
+    def get_socket_factory(self):
+        raise NotImplementedError
+
+    @classmethod
+    def set_timeout(cls, socket, timeout):
         raise NotImplementedError
 
 
@@ -109,6 +129,10 @@ class ThriftClient(ThriftBaseClient):
     def get_socket_factory(self):
         from thrift.transport import TSocket
         return TSocket.TSocket
+
+    @classmethod
+    def set_timeout(cls, socket, timeout):
+        socket.setTimeout(timeout)
 
 
 class ThriftPyClient(ThriftBaseClient):
@@ -141,6 +165,11 @@ class ThriftPyClient(ThriftBaseClient):
         from thriftpy.transport import TSocket
         return TSocket
 
+    @classmethod
+    def set_timeout(cls, socket, timeout):
+        socket.set_timeout(timeout)
+
+
 
 class ThriftPyCyClient(ThriftBaseClient):
     @property
@@ -171,6 +200,10 @@ class ThriftPyCyClient(ThriftBaseClient):
     def get_socket_factory(self):
         from thriftpy.transport import TSocket
         return TSocket
+
+    @classmethod
+    def set_timeout(cls, socket, timeout):
+        socket.set_timeout(timeout)
 
 
 class BaseClientPool(object):
