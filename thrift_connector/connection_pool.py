@@ -412,7 +412,7 @@ class HeartbeatClientPool(ClientPool):
                     conn.close()
 
 
-class MultiServerClientBase(ClientPool):
+class MultiServerClientBase(BaseClientPool):
     def __init__(self, service, servers, timeout=30, name=None,
                  raise_empty=False, max_conn=30, connction_class=ThriftClient,
                  keepalive=None, tracking=False, tracker_factory=None):
