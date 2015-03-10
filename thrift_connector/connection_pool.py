@@ -351,6 +351,7 @@ class ClientPool(BaseClientPool):
         validate_host_port(host, port)
         self.host = host
         self.port = port
+        self.clear()
 
     def yield_server(self):
         return self.host, self.port
@@ -444,6 +445,7 @@ class MultiServerClientBase(BaseClientPool):
             assert len(i) == 2
             validate_host_port(*i)
         self.servers = server_info
+        self.clear()
 
 
 class RandomMultiServerClient(MultiServerClientBase):
