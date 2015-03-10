@@ -10,6 +10,10 @@ import time
 logger = logging.getLogger(__name__)
 
 
+def validate_host_port(host, port):
+    if not all((host, port)):
+        raise RuntimeError("host and port not valid: %r:%r" % (host, port))
+
 class ThriftBaseClient(object):
     def __init__(self, host, port, transport, protocol, service,
                  keepalive=None, pool_generation=0, tracking=False,
@@ -210,6 +214,9 @@ class BaseClientPool(object):
     def __init__(self, service, timeout=30, name=None,
                  raise_empty=False, max_conn=30, connction_class=ThriftClient,
                  keepalive=None, tracking=False, tracker_factory=None):
+        if service is None:
+            raise RuntimeError("Service cannot be None")
+
         self.service = service
         self.timeout = timeout
         self.name = name or service.__name__
@@ -324,6 +331,7 @@ class ClientPool(BaseClientPool):
     def __init__(self, service, host, port, timeout=30, name=None,
                  raise_empty=False, max_conn=30, connction_class=ThriftClient,
                  keepalive=None, tracking=False, tracker_factory=None):
+        validate_host_port(host, port)
         super(ClientPool, self).__init__(
             service=service,
             timeout=timeout,
@@ -340,6 +348,7 @@ class ClientPool(BaseClientPool):
 
     def set_servers(self, server_info):
         host, port = server_info
+        validate_host_port(host, port)
         self.host = host
         self.port = port
 
@@ -433,6 +442,7 @@ class MultiServerClientBase(BaseClientPool):
     def set_servers(self, server_info):
         for i in server_info:
             assert len(i) == 2
+            validate_host_port(*i)
         self.servers = server_info
 
 
