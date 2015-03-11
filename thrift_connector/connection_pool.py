@@ -438,7 +438,7 @@ class MultiServerClientBase(BaseClientPool):
             tracker_factory=None,
             )
 
-        self.servers = servers
+        self.servers = list(servers)
 
     def set_servers(self, server_info):
         for i in server_info:
@@ -457,8 +457,7 @@ class RandomMultiServerClient(MultiServerClientBase):
 class RoundRobinMultiServerClient(MultiServerClientBase):
     def __init__(self, *args, **kwds):
         super(RoundRobinMultiServerClient, self).__init__(*args, **kwds)
-        self.index = 0
-        self.servers = list(self.servers)
+        self.index = random.randint(0, len(self.servers) - 1)
         random.shuffle(self.servers)
 
     def yield_server(self):
