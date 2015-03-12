@@ -157,7 +157,7 @@ class ThriftPyClient(ThriftBaseClient):
 
     def get_tclient(self, service, protocol):
         if self.tracking is True:
-            from thriftpy.thrift import TTrackedClient
+            from thriftpy.contrib.tracking import TTrackedClient
             client = TTrackedClient(self.tracker_factory, service, protocol)
         else:
             from thriftpy.thrift import TClient
@@ -193,7 +193,7 @@ class ThriftPyCyClient(ThriftBaseClient):
 
     def get_tclient(self, service, protocol):
         if self.tracking is True:
-            from thriftpy.thrift import TTrackedClient
+            from thriftpy.contrib.tracking import TTrackedClient
             client = TTrackedClient(self.tracker_factory, service, protocol)
         else:
             from thriftpy.thrift import TClient
