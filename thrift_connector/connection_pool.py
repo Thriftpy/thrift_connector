@@ -229,6 +229,14 @@ class BaseClientPool(object):
         self.tracking = tracking
         self.tracker_factory = tracker_factory
 
+    @contextlib.contextmanager
+    def annotate(self, **kwds):
+        if not self.tracking:
+            raise NotImplementedError("Tracking is not enabled")
+
+        with self.tracker_factory.annotate(**kwds) as annotation:
+            yield annotation
+
     def keys(self):
         return set([self.name, self.service.__name__])
 
