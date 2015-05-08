@@ -250,16 +250,23 @@ class BaseClientPool(object):
             c.close()
 
     def get_client_from_pool(self):
-        if not self.connections:
-            if self.raise_empty:
-                raise self.Empty
-            return
-
-        connection = self.connections.pop()
+        connection = self._get_connection()
         if connection.test_connection():  # make sure old connection is usable
             return connection
         else:
             connection.close()
+
+    def _get_connection():
+        if not self.connections:
+            if self.raise_empty:
+                raise self.Empty
+            return None
+        try:
+            return self.connections.pop()
+        # When only one connection left, just return None if it
+        # has already been popped in another thread.
+        except KeyError:
+            return None
 
     def put_back_connection(self, conn):
         assert isinstance(conn, ThriftBaseClient)
@@ -392,14 +399,7 @@ class HeartbeatClientPool(ClientPool):
                         self.service.__name__, e)
 
     def get_client_from_pool(self):
-        # override, do not test connection before returning client
-        if not self.connections:
-            if self.raise_empty:
-                raise self.Empty
-            return
-
-        connection = self.connections.pop()
-        return connection
+        return self._get_connection()
 
     def maintain_connections(self):
         sleep_time = max([1, self.timeout - 5])
