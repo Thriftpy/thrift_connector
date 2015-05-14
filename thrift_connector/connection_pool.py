@@ -262,12 +262,14 @@ class BaseClientPool(object):
 
     def get_client_from_pool(self):
         connection = self._get_connection()
+        if connection is None:
+            return
         if connection.test_connection():  # make sure old connection is usable
             return connection
         else:
             connection.close()
 
-    def _get_connection():
+    def _get_connection(self):
         if not self.connections:
             if self.raise_empty:
                 raise self.Empty
