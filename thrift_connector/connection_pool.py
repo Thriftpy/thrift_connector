@@ -7,12 +7,15 @@ import random
 import thread
 import time
 
+from .hooks import api_call_context
+
 logger = logging.getLogger(__name__)
 
 
 def validate_host_port(host, port):
     if not all((host, port)):
         raise RuntimeError("host and port not valid: %r:%r" % (host, port))
+
 
 class ThriftBaseClient(object):
     def __init__(self, host, port, transport, protocol, service,
@@ -305,7 +308,8 @@ class BaseClientPool(object):
             api = getattr(client, name, None)
             try:
                 if api and callable(api):
-                    return api(*args, **kwds)
+                    with api_call_context(self, client, name):
+                        return api(*args, **kwds)
                 raise AttributeError("%s not found in %s" % (name, client))
             finally:
                 self.put_back_connection(client)
