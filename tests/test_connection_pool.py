@@ -6,6 +6,7 @@ import datetime
 import signal
 
 import pytest
+from mock import Mock
 
 from thrift_connector import ClientPool, RoundRobinMultiServerClient, \
     RandomMultiServerClient, HeartbeatClientPool
@@ -13,7 +14,7 @@ from thriftpy.transport import TTransportException
 
 
 @pytest.fixture
-def fake_time(monkeypatch):
+def fake_datetime(monkeypatch):
     class mock_datetime(object):
         FAKE_TIME = datetime.datetime(2014, 10, 9)
 
@@ -22,6 +23,18 @@ def fake_time(monkeypatch):
             return cls.FAKE_TIME
     monkeypatch.setattr(datetime, 'datetime', mock_datetime)
     return mock_datetime
+
+
+@pytest.fixture
+def fake_time(monkeypatch):
+    class mock_time(object):
+        FAKE_TIME = 1431587880.601526
+
+        @classmethod
+        def time(cls):
+            return cls.FAKE_TIME
+    monkeypatch.setattr(time, 'time', mock_time.time)
+    return mock_time
 
 
 @pytest.fixture
@@ -163,7 +176,7 @@ def test_ttronsport_exception_not_put_back(
 
 def test_setted_connection_pool_connection_keepalive(
         pingpong_thrift_client, pingpong_service_key, pingpong_thrift_service,
-        fake_time):
+        fake_datetime):
     keep_alive = 1
     pool = ClientPool(
         pingpong_thrift_service,
@@ -181,11 +194,11 @@ def test_setted_connection_pool_connection_keepalive(
         assert conn.test_connection()
         old_connection = conn
 
-    fake_time.FAKE_TIME = now + datetime.timedelta(seconds=0.1)
+    fake_datetime.FAKE_TIME = now + datetime.timedelta(seconds=0.1)
     with pool.connection_ctx() as conn:
         assert conn is old_connection
 
-    fake_time.FAKE_TIME = now + datetime.timedelta(seconds=keep_alive + 1)
+    fake_datetime.FAKE_TIME = now + datetime.timedelta(seconds=keep_alive + 1)
     assert not old_connection.test_connection()
 
     with pool.connection_ctx() as conn:
@@ -194,7 +207,7 @@ def test_setted_connection_pool_connection_keepalive(
 
 def test_not_setted_connection_pool_connection_keepalive(
         pingpong_thrift_client, pingpong_service_key, pingpong_thrift_service,
-        fake_time):
+        fake_datetime):
     pool = ClientPool(
         pingpong_thrift_service,
         pingpong_thrift_client.host,
@@ -210,11 +223,11 @@ def test_not_setted_connection_pool_connection_keepalive(
         assert conn.test_connection()
         old_connection = conn
 
-    fake_time.FAKE_TIME = now + datetime.timedelta(seconds=0.1)
+    fake_datetime.FAKE_TIME = now + datetime.timedelta(seconds=0.1)
     with pool.connection_ctx() as conn:
         assert conn is old_connection
 
-    fake_time.FAKE_TIME = now + datetime.timedelta(days=100)
+    fake_datetime.FAKE_TIME = now + datetime.timedelta(days=100)
     assert old_connection.test_connection()
 
     with pool.connection_ctx() as conn:
@@ -223,7 +236,7 @@ def test_not_setted_connection_pool_connection_keepalive(
 
 def test_connection_pool_generation(
         pingpong_thrift_client, pingpong_service_key, pingpong_thrift_service,
-        fake_time):
+        fake_datetime):
     pool = ClientPool(
         pingpong_thrift_service,
         pingpong_thrift_client.host,
@@ -249,7 +262,7 @@ def test_connection_pool_generation(
 
 def test_random_multiconnection_pool(
         pingpong_thrift_client, pingpong_service_key, pingpong_thrift_service,
-        fake_time):
+        fake_datetime):
     servers = [
         (pingpong_thrift_client.host, pingpong_thrift_client.port),
         (pingpong_thrift_client.host, pingpong_thrift_client.port2),
@@ -269,7 +282,7 @@ def test_random_multiconnection_pool(
 
 def test_roundrobin_multiconnection_pool(
         pingpong_thrift_client, pingpong_service_key, pingpong_thrift_service,
-        fake_time):
+        fake_datetime):
     servers = [
         (pingpong_thrift_client.host, pingpong_thrift_client.port),
         (pingpong_thrift_client.host, pingpong_thrift_client.port2),
@@ -301,7 +314,7 @@ def test_roundrobin_multiconnection_pool(
 
 def test_heartbeat_client_pool(
         pingpong_thrift_client, pingpong_service_key, pingpong_thrift_service,
-        fake_time):
+        fake_datetime):
     heartbeat_pool = HeartbeatClientPool(
         pingpong_thrift_service,
         host=pingpong_thrift_client.host,
@@ -327,3 +340,33 @@ def test_heartbeat_client_pool(
     # disconnection should be detected and dead clients removed
     new_client = heartbeat_pool.get_client()
     assert new_client.test_connection()
+
+
+def test_api_call_context(
+        pingpong_thrift_client, pingpong_service_key, pingpong_thrift_service,
+        fake_time):
+    from thrift_connector.hooks import before_call, after_call
+
+    mock_before_hook = Mock()
+    mock_after_hook = Mock()
+    before_call.register(mock_before_hook)
+    after_call.register(mock_after_hook)
+
+    pool = ClientPool(
+        pingpong_thrift_service,
+        pingpong_thrift_client.host,
+        pingpong_thrift_client.port,
+        name=pingpong_service_key,
+        raise_empty=False, max_conn=3,
+        connction_class=pingpong_thrift_client.pool.connction_class,
+        )
+    pool.ping()
+
+    # get one client manually, there should be one client in pool,
+    # since there's only one call
+    client = pool.get_client()
+    assert client.test_connection()
+    pool.put_back_connection(client)
+
+    mock_before_hook.assert_called_with(pool, client, 'ping', fake_time.time())
+    mock_after_hook.assert_called_with(pool, client, 'ping', fake_time.time(), 0)
