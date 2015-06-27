@@ -2,8 +2,8 @@
 
 from connection_pool import ClientPool, ThriftClient, ThriftPyClient, \
     ThriftPyCyClient, RandomMultiServerClient, RoundRobinMultiServerClient, \
-    HeartbeatClientPool
+    HeartbeatClientPool, HuskarClientPool
 
 __all__ = [ClientPool, ThriftClient, ThriftPyClient, ThriftPyCyClient,
            RandomMultiServerClient, RoundRobinMultiServerClient,
-           HeartbeatClientPool]
+           HeartbeatClientPool, HuskarClientPool]

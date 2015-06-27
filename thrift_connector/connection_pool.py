@@ -501,3 +501,80 @@ class RoundRobinMultiServerClient(MultiServerClientBase):
         ret = self.servers[self.index]
         self.index += 1
         return ret
+
+
+class HuskarClientPool(BaseClientPool):
+    class ServerInstance(object):
+        def __init__(self, ip, port):
+            self.ip = ip
+            self.port = port
+
+        def ip_port(self):
+            return (self.ip, self.port)
+
+    def __init__(self, huskar_client, service_name, cluster,
+                 *args, **kwds):
+        super(HuskarClientPool, self).__init__(*args, **kwds)
+        self.service_consumer = huskar_client.service_consumer
+        self.server_list = []
+        self.service_consumer.register_hook_funcation(service_name, cluster,
+                                                      self.update_servers,
+                                                      trigger=True)
+        self.index = random.randint(0, len(self.server_list) - 1)
+        thread.start_new_thread(self.maintain_connections, tuple())
+
+    def update_servers(self, servers):
+        server_list = []
+        for server in servers.values():
+            instance = self.parse_server(server)
+            if instance:
+                server_list.append(instance)
+        self.server_list = server_list
+
+    def get_servers_list(self):
+        return self.server_list
+
+    def parse_server(self, server):
+        try:
+            ip = server['ip']
+            port = server['port']['main']
+        except KeyError:
+            logger.error('Error format of server info: {}'.format(server))
+            return None
+        else:
+            return self.ServerInstance(ip, port)
+
+    def yield_server(self):
+        assert len(self.server_list) > 0
+        if self.index >= len(self.server_list):
+            self.index = 0
+        instance = self.server_list[self.index]
+        self.index += 1
+        return instance.ip_port()
+
+    def connection_ok(self, conn):
+        if (conn.host, conn.port) in [instance.ip_port() for instance
+           in self.server_list] and conn.test_connection():
+            return True
+        else:
+            return False
+
+    def maintain_connections(self):
+        sleep_time = max([1, self.timeout - 5])
+        while True:
+            time.sleep(sleep_time)
+            count = 0
+            pool_size = self.pool_size()
+
+            while count < pool_size:
+                conn = self.get_client_from_pool()
+
+                if conn is None:
+                    break
+
+                count += 1
+
+                if self.connection_ok(conn):
+                    self.put_back_connection(conn)
+                else:
+                    conn.close()
