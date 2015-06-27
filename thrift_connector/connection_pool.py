@@ -33,6 +33,7 @@ class ThriftBaseClient(object):
         self.tracker_factory = tracker_factory
 
         self.client = self.get_tclient(service, protocol)
+        self.after_close_callbacks = []
 
     def __repr__(self):
         return "<%s service=%s>" % (
@@ -43,21 +44,20 @@ class ThriftBaseClient(object):
     def __getattr__(self, name):
         return getattr(self.client, name)
 
-    def register_after_close_func(self, function, *args, **kwargs):
-        def after_close_func():
-            if callable(function):
-                return function(*args, **kwargs)
-            else:
-                return lambda: None
-        self.after_close = after_close_func
+    def register_after_close_func(self, func):
+        self.after_close_callbacks.append(func)
 
     def close(self):
         try:
             self.transport.close()
-            if hasattr(self, 'after_close'):
-                self.after_close()
         except Exception as e:
             logger.warn("Connction close failed: %r" % e)
+        finally:
+            for cb in self.after_close_callbacks:
+                try:
+                    cb()
+                except:
+                    logger.warn("Callback failed", exc_info=True)
 
     def is_expired(self):
         return self.alive_until and datetime.datetime.now() > self.alive_until
