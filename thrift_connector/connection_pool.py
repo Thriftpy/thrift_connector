@@ -43,9 +43,19 @@ class ThriftBaseClient(object):
     def __getattr__(self, name):
         return getattr(self.client, name)
 
+    def register_after_close_func(self, function, *args, **kwargs):
+        def after_close_func():
+            if callable(function):
+                return function(*args, **kwargs)
+            else:
+                return lambda: None
+        self.after_close = after_close_func
+
     def close(self):
         try:
             self.transport.close()
+            if hasattr(self, 'after_close'):
+                self.after_close()
         except Exception as e:
             logger.warn("Connction close failed: %r" % e)
 
@@ -175,7 +185,6 @@ class ThriftPyClient(ThriftBaseClient):
     @classmethod
     def set_timeout(cls, socket, timeout):
         socket.set_timeout(timeout)
-
 
 
 class ThriftPyCyClient(ThriftBaseClient):
