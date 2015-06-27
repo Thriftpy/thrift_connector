@@ -370,3 +370,20 @@ def test_api_call_context(
 
     mock_before_hook.assert_called_with(pool, client, 'ping', fake_time.time())
     mock_after_hook.assert_called_with(pool, client, 'ping', fake_time.time(), 0)
+
+
+def test_conn_close_hook(pingpong_thrift_client, pingpong_service_key,
+                         pingpong_thrift_service, fake_time):
+    pool = ClientPool(
+        pingpong_thrift_service,
+        pingpong_thrift_client.host,
+        pingpong_thrift_client.port,
+        name=pingpong_service_key,
+        raise_empty=False, max_conn=3,
+        connction_class=pingpong_thrift_client.pool.connction_class,
+        )
+    close_mock = Mock()
+    pool.register_after_close_func(close_mock)
+    client = pool.get_client()
+    client.close()
+    close_mock.assert_called_with(pool, client)

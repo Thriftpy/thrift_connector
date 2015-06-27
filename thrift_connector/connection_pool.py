@@ -11,6 +11,8 @@ from .hooks import api_call_context
 
 logger = logging.getLogger(__name__)
 
+SIGNAL_CLOSE_NAME = "close"
+
 
 def validate_host_port(host, port):
     if not all((host, port)):
@@ -20,7 +22,7 @@ def validate_host_port(host, port):
 class ThriftBaseClient(object):
     def __init__(self, host, port, transport, protocol, service,
                  keepalive=None, pool_generation=0, tracking=False,
-                 tracker_factory=None):
+                 tracker_factory=None, pool=None):
         self.host = host
         self.port = port
         self.transport = transport
@@ -33,7 +35,7 @@ class ThriftBaseClient(object):
         self.tracker_factory = tracker_factory
 
         self.client = self.get_tclient(service, protocol)
-        self.after_close_callbacks = []
+        self.pool = pool
 
     def __repr__(self):
         return "<%s service=%s>" % (
@@ -44,20 +46,13 @@ class ThriftBaseClient(object):
     def __getattr__(self, name):
         return getattr(self.client, name)
 
-    def register_after_close_func(self, func):
-        self.after_close_callbacks.append(func)
-
     def close(self):
         try:
             self.transport.close()
         except Exception as e:
             logger.warn("Connction close failed: %r" % e)
         finally:
-            for cb in self.after_close_callbacks:
-                try:
-                    cb()
-                except:
-                    logger.warn("Callback failed", exc_info=True)
+            self.pool.signal_handler(SIGNAL_CLOSE_NAME, self)
 
     def is_expired(self):
         return self.alive_until and datetime.datetime.now() > self.alive_until
@@ -73,7 +68,8 @@ class ThriftBaseClient(object):
 
     @classmethod
     def connect(cls, service, host, port, timeout=30, keepalive=None,
-                pool_generation=0, tracking=False, tracker_factory=None):
+                pool_generation=0, tracking=False, tracker_factory=None,
+                pool=None):
         SOCKET = cls.get_socket_factory()(host, port)
         cls.set_timeout(SOCKET, timeout * 1000)
         PROTO_FACTORY = cls.get_protoco_factory()
@@ -93,7 +89,8 @@ class ThriftBaseClient(object):
             keepalive=keepalive,
             pool_generation=pool_generation,
             tracking=tracking,
-            tracker_factory=tracker_factory
+            tracker_factory=tracker_factory,
+            pool=pool,
             )
 
     @property
@@ -240,6 +237,7 @@ class BaseClientPool(object):
         self.generation = 0
         self.tracking = tracking
         self.tracker_factory = tracker_factory
+        self.conn_close_callbacks = []
 
     @contextlib.contextmanager
     def annotate(self, **kwds):
@@ -315,6 +313,7 @@ class BaseClientPool(object):
             pool_generation=self.generation,
             tracking=self.tracking,
             tracker_factory=self.tracker_factory,
+            pool=self
             )
 
     def get_client(self):
@@ -355,6 +354,18 @@ class BaseClientPool(object):
             raise
         finally:
             client.close()
+
+    def register_after_close_func(self, func):
+        self.conn_close_callbacks.append(func)
+
+    def signal_handler(self, signal_name, conn):
+        if signal_name == SIGNAL_CLOSE_NAME:
+            for cb in self.conn_close_callbacks:
+                try:
+                    cb(self, conn)
+                except:
+                    logger.warn("%s Callback failed" % SIGNAL_CLOSE_NAME,
+                                exc_info=True)
 
 
 class ClientPool(BaseClientPool):
