@@ -116,8 +116,17 @@ class ThriftBaseClient(object):
     def set_timeout(cls, socket, timeout):
         raise NotImplementedError
 
+    @classmethod
+    def get_base_texception(cls):
+        raise NotImplementedError
+
 
 class ThriftClient(ThriftBaseClient):
+    @classmethod
+    def get_base_texception(cls):
+        from thrift.Thrift import TException
+        return TException
+
     @property
     def TTransportException(self):
         from thrift.transport.TTransport import TTransportException
@@ -150,6 +159,11 @@ class ThriftClient(ThriftBaseClient):
 
 
 class ThriftPyClient(ThriftBaseClient):
+    @classmethod
+    def get_base_texception(cls):
+        from thriftpy.thrift import TException
+        return TException
+
     @property
     def TTransportException(self):
         from thriftpy.transport import TTransportException
@@ -185,6 +199,11 @@ class ThriftPyClient(ThriftBaseClient):
 
 
 class ThriftPyCyClient(ThriftBaseClient):
+    @classmethod
+    def get_base_texception(cls):
+        from thriftpy.thrift import TException
+        return TException
+
     @property
     def TTransportException(self):
         from thriftpy.transport import TTransportException
@@ -238,6 +257,7 @@ class BaseClientPool(object):
         self.tracking = tracking
         self.tracker_factory = tracker_factory
         self.conn_close_callbacks = []
+        self.base_texception = connction_class.get_base_texception()
 
     @contextlib.contextmanager
     def annotate(self, **kwds):
@@ -328,6 +348,14 @@ class BaseClientPool(object):
                     with api_call_context(self, client, name):
                         return api(*args, **kwds)
                 raise AttributeError("%s not found in %s" % (name, client))
+            except self.base_texception as e:
+                if "UserException" not in str(e):
+                    logger.error(
+                        "Failed to call: %r.%r => %r",
+                        self.name,
+                        name,
+                        e)
+                raise
             finally:
                 self.put_back_connection(client)
         return call
