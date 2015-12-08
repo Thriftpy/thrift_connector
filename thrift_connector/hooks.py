@@ -27,10 +27,17 @@ before_call = ThriftConnectorHook('before_call')
 after_call = ThriftConnectorHook('after_call')
 
 
-@contextlib.contextmanager
 def api_call_context(pool, client, api_name):
-    now = time.time()
-    before_call.send(pool, client, api_name, now)
-    yield
-    cost = time.time() - now
-    after_call.send(pool, client, api_name, now, cost)
+    def deco(func):
+        def wrapper(*args, **kwargs):
+            now = time.time()
+            before_call.send(pool, client, api_name, now)
+            try:
+                ret = func(*args, **kwargs)
+            finally:
+                cost = time.time() - now
+                after_call.send(pool, client, api_name, now, cost)
+            return ret
+        return wrapper
+    return deco
+

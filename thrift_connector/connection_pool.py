@@ -18,6 +18,9 @@ def validate_host_port(host, port):
     if not all((host, port)):
         raise RuntimeError("host and port not valid: %r:%r" % (host, port))
 
+def is_real_api_in_native_thrift(api):
+    return not api.startswith(('_', '__', 'send_', 'recv_'))
+
 
 class ThriftBaseClient(object):
     def __init__(self, host, port, transport, protocol, service,
@@ -33,10 +36,11 @@ class ThriftBaseClient(object):
         self.pool_generation = pool_generation
         self.tracking = tracking
         self.tracker_factory = tracker_factory
-
-        self.client = self.get_tclient(service, protocol)
         self.pool = pool
 
+        self.client = self.get_tclient(service, protocol)
+        self.init_client(self.client)
+       
     def __repr__(self):
         return "<%s service=%s>" % (
             self.__class__.__name__,
@@ -45,6 +49,9 @@ class ThriftBaseClient(object):
 
     def __getattr__(self, name):
         return getattr(self.client, name)
+
+    def init_client(self, client):
+        pass
 
     def close(self):
         try:
@@ -118,6 +125,13 @@ class ThriftBaseClient(object):
 
 
 class ThriftClient(ThriftBaseClient):
+    def init_client(self, client):
+        for api in dir(client):
+            if is_real_api_in_native_thrift(api):
+               target = getattr(client, api)
+               setattr(client, api,
+                       api_call_context(self.pool, client, api)(target))
+ 
     @property
     def TTransportException(self):
         from thrift.transport.TTransport import TTransportException
@@ -149,12 +163,38 @@ class ThriftClient(ThriftBaseClient):
         socket.setTimeout(timeout)
 
 
-class ThriftPyClient(ThriftBaseClient):
+class ThriftPyBaseClient(ThriftBaseClient):
+    def init_client(self, client):
+        for api in self.service.thrift_services:
+            target = getattr(client, api)
+            setattr(client, api,
+                    api_call_context(self.pool, client, api)(target))
+ 
     @property
     def TTransportException(self):
         from thriftpy.transport import TTransportException
         return TTransportException
 
+    def get_tclient(self, service, protocol):
+        if self.tracking is True:
+            from thriftpy.contrib.tracking import TTrackedClient
+            client = TTrackedClient(self.tracker_factory, service, protocol)
+        else:
+            from thriftpy.thrift import TClient
+            client = TClient(service, protocol)
+        return client
+
+    @classmethod
+    def get_socket_factory(self):
+        from thriftpy.transport import TSocket
+        return TSocket
+
+    @classmethod
+    def set_timeout(cls, socket, timeout):
+        socket.set_timeout(timeout)
+
+
+class ThriftPyClient(ThriftPyBaseClient):
     @classmethod
     def get_protoco_factory(self):
         from thriftpy.protocol import TBinaryProtocolFactory
@@ -165,31 +205,8 @@ class ThriftPyClient(ThriftBaseClient):
         from thriftpy.transport import TBufferedTransportFactory
         return TBufferedTransportFactory().get_transport
 
-    def get_tclient(self, service, protocol):
-        if self.tracking is True:
-            from thriftpy.contrib.tracking import TTrackedClient
-            client = TTrackedClient(self.tracker_factory, service, protocol)
-        else:
-            from thriftpy.thrift import TClient
-            client = TClient(service, protocol)
-        return client
 
-    @classmethod
-    def get_socket_factory(self):
-        from thriftpy.transport import TSocket
-        return TSocket
-
-    @classmethod
-    def set_timeout(cls, socket, timeout):
-        socket.set_timeout(timeout)
-
-
-class ThriftPyCyClient(ThriftBaseClient):
-    @property
-    def TTransportException(self):
-        from thriftpy.transport import TTransportException
-        return TTransportException
-
+class ThriftPyCyClient(ThriftPyBaseClient):
     @classmethod
     def get_protoco_factory(self):
         from thriftpy.protocol import TCyBinaryProtocolFactory
@@ -199,24 +216,6 @@ class ThriftPyCyClient(ThriftBaseClient):
     def get_transport_factory(self):
         from thriftpy.transport import TCyBufferedTransportFactory
         return TCyBufferedTransportFactory().get_transport
-
-    def get_tclient(self, service, protocol):
-        if self.tracking is True:
-            from thriftpy.contrib.tracking import TTrackedClient
-            client = TTrackedClient(self.tracker_factory, service, protocol)
-        else:
-            from thriftpy.thrift import TClient
-            client = TClient(service, protocol)
-        return client
-
-    @classmethod
-    def get_socket_factory(self):
-        from thriftpy.transport import TSocket
-        return TSocket
-
-    @classmethod
-    def set_timeout(cls, socket, timeout):
-        socket.set_timeout(timeout)
 
 
 class BaseClientPool(object):
@@ -325,8 +324,7 @@ class BaseClientPool(object):
             api = getattr(client, name, None)
             try:
                 if api and callable(api):
-                    with api_call_context(self, client, name):
-                        return api(*args, **kwds)
+                    return api(*args, **kwds)
                 raise AttributeError("%s not found in %s" % (name, client))
             finally:
                 self.put_back_connection(client)
