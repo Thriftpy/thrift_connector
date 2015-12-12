@@ -18,9 +18,6 @@ def validate_host_port(host, port):
     if not all((host, port)):
         raise RuntimeError("host and port not valid: %r:%r" % (host, port))
 
-def is_real_api_in_native_thrift(api):
-    return not api.startswith(('_', '__', 'send_', 'recv_'))
-
 
 class ThriftBaseClient(object):
     def __init__(self, host, port, transport, protocol, service,
@@ -40,7 +37,7 @@ class ThriftBaseClient(object):
 
         self.client = self.get_tclient(service, protocol)
         self.init_client(self.client)
-       
+
     def __repr__(self):
         return "<%s service=%s>" % (
             self.__class__.__name__,
@@ -127,11 +124,11 @@ class ThriftBaseClient(object):
 class ThriftClient(ThriftBaseClient):
     def init_client(self, client):
         for api in dir(client):
-            if is_real_api_in_native_thrift(api):
-               target = getattr(client, api)
-               setattr(client, api,
-                       api_call_context(self.pool, client, api)(target))
- 
+            if not api.startswith(('_', '__', 'send_', 'recv_')):
+                target = getattr(client, api)
+                setattr(client, api,
+                        api_call_context(self.pool, client, api)(target))
+
     @property
     def TTransportException(self):
         from thrift.transport.TTransport import TTransportException
@@ -169,7 +166,7 @@ class ThriftPyBaseClient(ThriftBaseClient):
             target = getattr(client, api)
             setattr(client, api,
                     api_call_context(self.pool, client, api)(target))
- 
+
     @property
     def TTransportException(self):
         from thriftpy.transport import TTransportException

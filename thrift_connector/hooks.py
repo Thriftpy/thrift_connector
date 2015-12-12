@@ -33,11 +33,9 @@ def api_call_context(pool, client, api_name):
             now = time.time()
             before_call.send(pool, client, api_name, now)
             try:
-                ret = func(*args, **kwargs)
+                return func(*args, **kwargs)
             finally:
                 cost = time.time() - now
                 after_call.send(pool, client, api_name, now, cost)
-            return ret
         return wrapper
     return deco
-
