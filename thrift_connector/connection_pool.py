@@ -22,7 +22,7 @@ def validate_host_port(host, port):
 class ThriftBaseClient(object):
     def __init__(self, host, port, transport, protocol, service,
                  keepalive=None, pool_generation=0, tracking=False,
-                 tracker_factory=None, pool=None):
+                 tracker_factory=None, pool=None, socket=None):
         self.host = host
         self.port = port
         self.transport = transport
@@ -33,6 +33,7 @@ class ThriftBaseClient(object):
         self.pool_generation = pool_generation
         self.tracking = tracking
         self.tracker_factory = tracker_factory
+        self.socket = socket
         self.pool = pool
 
         self.client = self.get_tclient(service, protocol)
@@ -95,6 +96,7 @@ class ThriftBaseClient(object):
             tracking=tracking,
             tracker_factory=tracker_factory,
             pool=pool,
+            socket=SOCKET,
             )
 
     @property
@@ -119,6 +121,12 @@ class ThriftBaseClient(object):
     @classmethod
     def set_timeout(cls, socket, timeout):
         raise NotImplementedError
+
+    def set_client_timeout(self, timeout):
+        self.set_timeout(self.socket, timeout)
+
+    def get_timeout(self):
+        return self.socket._timeout
 
 
 class ThriftClient(ThriftBaseClient):
@@ -288,6 +296,8 @@ class BaseClientPool(object):
         assert isinstance(conn, ThriftBaseClient)
         if self.max_conn > 0 and len(self.connections) < self.max_conn and\
                 conn.pool_generation == self.generation:
+            if self.timeout != conn.get_timeout():
+                conn.set_client_timeout(self.timeout * 1000)
             self.connections.add(conn)
             return True
         else:
@@ -310,7 +320,7 @@ class BaseClientPool(object):
             tracking=self.tracking,
             tracker_factory=self.tracker_factory,
             pool=self
-            )
+        )
 
     def get_client(self):
         return self.get_client_from_pool() or self.produce_client()
@@ -328,8 +338,10 @@ class BaseClientPool(object):
         return call
 
     @contextlib.contextmanager
-    def connection_ctx(self):
+    def connection_ctx(self, timeout=None):
         client = self.get_client()
+        if timeout is not None:
+            client.set_client_timeout(timeout * 1000)
         try:
             yield client
             self.put_back_connection(client)
