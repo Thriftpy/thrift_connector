@@ -38,14 +38,14 @@ Examples for thriftpy is:
 .. code:: python
 
     import thriftpy
-    from thrift_connector import ClientPool, ThriftPyCyClient
+    import thrift_connector.connection_pool as connection_pool
 
     service = thriftpy.load("pingpong_app/pingpong.thrift")
-    pool = ClientPool(
+    pool = connection_pool.ClientPool(
         service.PingService,
         'localhost',
         8880,
-        connction_class=ThriftPyCyClient
+        connction_class=connection_pool.ThriftPyCyClient
         )
 
     print "Sending Ping..."
@@ -60,13 +60,13 @@ Examples for thrift is:
     # -*- coding: utf-8 -*-
 
     from pingpong_app.pingpong_sdk.pingpong import PingService
-    from thrift_connector import ClientPool, ThriftClient
+    import connection_pool
 
-    pool = ClientPool(
+    pool = connection_pool.ClientPool(
         PingService,
         'localhost',
         8880,
-        connction_class=ThriftClient
+        connction_class=connection_pool.ThriftClient
         )
 
     print "Sending Ping..."
