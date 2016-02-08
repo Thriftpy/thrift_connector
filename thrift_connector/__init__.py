@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from connection_pool import ClientPool, ThriftClient, ThriftPyClient, \
+from .connection_pool import ClientPool, ThriftClient, ThriftPyClient, \
     ThriftPyCyClient, RandomMultiServerClient, RoundRobinMultiServerClient, \
     HeartbeatClientPool
 
