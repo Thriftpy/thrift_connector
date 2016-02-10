@@ -4,7 +4,7 @@ import logging
 import datetime
 import contextlib
 import random
-import thread
+import threading
 import time
 
 from .hooks import api_call_context
@@ -423,7 +423,7 @@ class HeartbeatClientPool(ClientPool):
             tracking=tracking,
             tracker_factory=tracker_factory
             )
-        thread.start_new_thread(self.maintain_connections, tuple())
+        threading.Thread(target=self.maintain_connections).start()
 
     def _close_and_remove_client(self, client):
         if client not in self.connections:
