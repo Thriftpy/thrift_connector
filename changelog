@@ -4,4 +4,6 @@ Changelog
 0.15
 -----
 
-* Add full hook support
+* Add full hook support.
+* Python3 optimizations to imports and threading.
+* Can set temporary timeout for client.
