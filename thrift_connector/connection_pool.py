@@ -126,7 +126,7 @@ class ThriftBaseClient(object):
         self.set_timeout(self.socket, timeout)
 
     def get_timeout(self):
-        return self.socket._timeout
+        raise NotImplementedError
 
 
 class ThriftClient(ThriftBaseClient):
@@ -167,6 +167,9 @@ class ThriftClient(ThriftBaseClient):
     def set_timeout(cls, socket, timeout):
         socket.setTimeout(timeout)
 
+    def get_timeout(self):
+        return self.socket._timeout
+
 
 class ThriftPyBaseClient(ThriftBaseClient):
     def init_client(self, client):
@@ -197,6 +200,9 @@ class ThriftPyBaseClient(ThriftBaseClient):
     @classmethod
     def set_timeout(cls, socket, timeout):
         socket.set_timeout(timeout)
+
+    def get_timeout(self):
+        return self.socket.socket_timeout
 
 
 class ThriftPyClient(ThriftPyBaseClient):
