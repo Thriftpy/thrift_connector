@@ -1,6 +1,11 @@
 Changelog
 ==========
 
+0.16
+-----
+
+* Fix thriftpy timeout
+
 0.15
 -----
 
