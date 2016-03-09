@@ -35,6 +35,8 @@ def api_call_context(pool, client, api_name):
             ret = None
             try:
                 ret = func(*args, **kwargs)
+            except Exception as e:
+                ret = e
             finally:
                 cost = time.time() - now
                 after_call.send(pool, client, api_name, now, cost, ret)
