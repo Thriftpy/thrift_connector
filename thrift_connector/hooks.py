@@ -32,10 +32,15 @@ def api_call_context(pool, client, api_name):
         def wrapper(*args, **kwargs):
             now = time.time()
             before_call.send(pool, client, api_name, now)
+            ret = None
             try:
-                return func(*args, **kwargs)
+                ret = func(*args, **kwargs)
+                return ret
+            except Exception as e:
+                ret = e
+                raise
             finally:
                 cost = time.time() - now
-                after_call.send(pool, client, api_name, now, cost)
+                after_call.send(pool, client, api_name, now, cost, ret)
         return wrapper
     return deco
