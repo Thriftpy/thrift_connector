@@ -43,7 +43,7 @@ class ThriftBaseClient(object):
         return "<%s service=%s>" % (
             self.__class__.__name__,
             self.client.__class__.__module__
-            )
+        )
 
     def __getattr__(self, name):
         return getattr(self.client, name)
@@ -97,7 +97,7 @@ class ThriftBaseClient(object):
             tracker_factory=tracker_factory,
             pool=pool,
             socket=SOCKET,
-            )
+        )
 
     @property
     def TTransportException(self):
@@ -135,7 +135,7 @@ class ThriftClient(ThriftBaseClient):
             if not api.startswith(('_', '__', 'send_', 'recv_')):
                 target = getattr(client, api)
                 setattr(client, api,
-                        api_call_context(self.pool, client, api)(target))
+                        api_call_context(self.pool, self, api)(target))
 
     @property
     def TTransportException(self):
@@ -176,7 +176,7 @@ class ThriftPyBaseClient(ThriftBaseClient):
         for api in self.service.thrift_services:
             target = getattr(client, api)
             setattr(client, api,
-                    api_call_context(self.pool, client, api)(target))
+                    api_call_context(self.pool, self, api)(target))
 
     @property
     def TTransportException(self):
@@ -264,7 +264,7 @@ class BaseClientPool(object):
         return "<%s service=%r>" % (
             self.__class__.__name__,
             self.keys()
-            )
+        )
 
     def pool_size(self):
         return len(self.connections)
@@ -396,7 +396,7 @@ class ClientPool(BaseClientPool):
             keepalive=keepalive,
             tracking=tracking,
             tracker_factory=tracker_factory,
-            )
+        )
         self.host = host
         self.port = port
 

@@ -11,4 +11,5 @@ service PingService {
      */
     string ping() throws (1:AboutToShutDownException shutdown_exception),
     string win(),
+    string sleep(1:i32 seconds),
 }
