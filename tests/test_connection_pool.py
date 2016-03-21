@@ -4,6 +4,7 @@ import os
 import time
 import datetime
 import signal
+import socket
 
 import pytest
 from mock import Mock
@@ -186,7 +187,7 @@ def test_setted_connection_pool_connection_keepalive(
         raise_empty=False, max_conn=3,
         connction_class=pingpong_thrift_client.pool.connction_class,
         keepalive=keep_alive
-        )
+    )
     assert pool.keepalive == keep_alive
     with pool.connection_ctx() as conn:
         now = datetime.datetime.now()
@@ -215,7 +216,7 @@ def test_not_setted_connection_pool_connection_keepalive(
         name=pingpong_service_key,
         raise_empty=False, max_conn=3,
         connction_class=pingpong_thrift_client.pool.connction_class,
-        )
+    )
     assert pool.keepalive is None
     with pool.connection_ctx() as conn:
         now = datetime.datetime.now()
@@ -244,7 +245,7 @@ def test_connection_pool_generation(
         name=pingpong_service_key,
         raise_empty=False, max_conn=3,
         connction_class=pingpong_thrift_client.pool.connction_class,
-        )
+    )
     c = pool.produce_client()
     assert c.pool_generation == pool.generation == 0
 
@@ -266,7 +267,7 @@ def test_random_multiconnection_pool(
     servers = [
         (pingpong_thrift_client.host, pingpong_thrift_client.port),
         (pingpong_thrift_client.host, pingpong_thrift_client.port2),
-        ]
+    ]
 
     random_pool = RandomMultiServerClient(
         pingpong_thrift_service,
@@ -274,7 +275,7 @@ def test_random_multiconnection_pool(
         name=pingpong_service_key,
         raise_empty=False, max_conn=3,
         connction_class=pingpong_thrift_client.pool.connction_class,
-        )
+    )
 
     with random_pool.connection_ctx() as conn:
         assert conn.test_connection()
@@ -286,7 +287,7 @@ def test_roundrobin_multiconnection_pool(
     servers = [
         (pingpong_thrift_client.host, pingpong_thrift_client.port),
         (pingpong_thrift_client.host, pingpong_thrift_client.port2),
-        ]
+    ]
 
     roundrobin_pool = RoundRobinMultiServerClient(
         pingpong_thrift_service,
@@ -294,7 +295,7 @@ def test_roundrobin_multiconnection_pool(
         name=pingpong_service_key,
         raise_empty=False, max_conn=3,
         connction_class=pingpong_thrift_client.pool.connction_class,
-        )
+    )
 
     conn1 = roundrobin_pool.produce_client()
     assert conn1.test_connection()
@@ -359,7 +360,7 @@ def test_api_call_context(
         name=pingpong_service_key,
         raise_empty=False, max_conn=3,
         connction_class=pingpong_thrift_client.pool.connction_class,
-        )
+    )
     pool.ping()
 
     # get one client manually, there should be one client in pool,
@@ -369,7 +370,8 @@ def test_api_call_context(
     pool.put_back_connection(client)
 
     mock_before_hook.assert_called_with(pool, client, 'ping', fake_time.time())
-    mock_after_hook.assert_called_with(pool, client, 'ping', fake_time.time(), 0)
+    mock_after_hook.assert_called_with(pool, client, 'ping', fake_time.time(),
+                                       0, 'pong')
 
 
 def test_conn_close_hook(pingpong_thrift_client, pingpong_service_key,
@@ -381,9 +383,35 @@ def test_conn_close_hook(pingpong_thrift_client, pingpong_service_key,
         name=pingpong_service_key,
         raise_empty=False, max_conn=3,
         connction_class=pingpong_thrift_client.pool.connction_class,
-        )
+    )
     close_mock = Mock()
     pool.register_after_close_func(close_mock)
     client = pool.get_client()
     client.close()
     close_mock.assert_called_with(pool, client)
+
+
+def test_set_timeout(pingpong_thrift_client, pingpong_service_key,
+                     pingpong_thrift_service, fake_time):
+    pool = ClientPool(
+        pingpong_thrift_service,
+        pingpong_thrift_client.host,
+        pingpong_thrift_client.port,
+        name=pingpong_service_key,
+        raise_empty=False, max_conn=3,
+        connction_class=pingpong_thrift_client.pool.connction_class,
+    )
+    client = pool.get_client()
+
+    client.set_client_timeout(0.5 * 1000)
+    assert client.sleep(0.2) == 'good morning'
+
+    with pytest.raises(socket.timeout) as e:
+        client.sleep(1)
+    assert 'timed out' in str(e.value)
+    client.close()
+
+    with pytest.raises(socket.timeout) as e:
+        with pool.connection_ctx(timeout=1) as client:
+            client.sleep(2)
+    assert 'timed out' in str(e.value)

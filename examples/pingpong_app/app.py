@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import time
 import thriftpy
 
 thrift_service = thriftpy.load(os.path.join(os.path.dirname(__file__), "pingpong.thrift"), "pingpong_thrift")  # noqa
@@ -16,6 +17,10 @@ class PingpongServer(object):
 
     def win(self):
         return "Yes, you win"
+
+    def sleep(self, seconds):
+        time.sleep(seconds)
+        return 'good morning'
 
 
 from thriftpy.thrift import TProcessor
