@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import logging
-import datetime
 import contextlib
 import random
 import threading
@@ -22,14 +21,16 @@ def validate_host_port(host, port):
 class ThriftBaseClient(object):
     def __init__(self, host, port, transport, protocol, service,
                  keepalive=None, pool_generation=0, tracking=False,
-                 tracker_factory=None, pool=None, socket=None):
+                 tracker_factory=None, pool=None, socket=None, use_limit=None):
         self.host = host
         self.port = port
         self.transport = transport
         self.protocol = protocol
         self.service = service
-        self.alive_until = datetime.datetime.now() + \
-            datetime.timedelta(seconds=keepalive) if keepalive else None
+        self.keepalive = keepalive
+        self.alive_until = time.time() + keepalive if keepalive else None
+        self.use_count = 0
+        self.use_limit = use_limit
         self.pool_generation = pool_generation
         self.tracking = tracking
         self.tracker_factory = tracker_factory
@@ -60,10 +61,18 @@ class ThriftBaseClient(object):
             self.pool.signal_handler(SIGNAL_CLOSE_NAME, self)
 
     def is_expired(self):
-        return self.alive_until and datetime.datetime.now() > self.alive_until
+        now = time.time()
+        return (self.alive_until and now > self.alive_until and
+                random.random() < 1 - (now - self.alive_until)/self.keepalive)
+
+    def incr_use_count(self):
+        self.use_count += 1
+
+    def is_tired(self):
+        return self.use_limit and self.use_count > self.use_limit
 
     def test_connection(self):
-        if self.is_expired():
+        if self.is_expired() or self.is_tired():
             return False
         try:
             self.ping()
@@ -74,7 +83,7 @@ class ThriftBaseClient(object):
     @classmethod
     def connect(cls, service, host, port, timeout=30, keepalive=None,
                 pool_generation=0, tracking=False, tracker_factory=None,
-                pool=None):
+                pool=None, use_limit=None):
         SOCKET = cls.get_socket_factory()(host, port)
         cls.set_timeout(SOCKET, timeout * 1000)
         PROTO_FACTORY = cls.get_protoco_factory()
@@ -97,6 +106,7 @@ class ThriftBaseClient(object):
             tracker_factory=tracker_factory,
             pool=pool,
             socket=SOCKET,
+            use_limit=use_limit,
         )
 
     @property
@@ -230,9 +240,9 @@ class ThriftPyCyClient(ThriftPyBaseClient):
 
 
 class BaseClientPool(object):
-    def __init__(self, service, timeout=30, name=None,
-                 raise_empty=False, max_conn=30, connction_class=ThriftClient,
-                 keepalive=None, tracking=False, tracker_factory=None):
+    def __init__(self, service, timeout=30, name=None, raise_empty=False,
+                 max_conn=30, connction_class=ThriftClient, keepalive=None,
+                 tracking=False, tracker_factory=None, use_limit=None):
         if service is None:
             raise RuntimeError("Service cannot be None")
 
@@ -244,6 +254,7 @@ class BaseClientPool(object):
         self.max_conn = max_conn
         self.connction_class = connction_class
         self.keepalive = keepalive
+        self.use_limit = use_limit
         self.generation = 0
         self.tracking = tracking
         self.tracker_factory = tracker_factory
@@ -325,7 +336,8 @@ class BaseClientPool(object):
             pool_generation=self.generation,
             tracking=self.tracking,
             tracker_factory=self.tracker_factory,
-            pool=self
+            pool=self,
+            use_limit=self.use_limit,
         )
 
     def get_client(self):
@@ -384,7 +396,8 @@ class BaseClientPool(object):
 class ClientPool(BaseClientPool):
     def __init__(self, service, host, port, timeout=30, name=None,
                  raise_empty=False, max_conn=30, connction_class=ThriftClient,
-                 keepalive=None, tracking=False, tracker_factory=None):
+                 keepalive=None, tracking=False, tracker_factory=None,
+                 use_limit=None):
         validate_host_port(host, port)
         super(ClientPool, self).__init__(
             service=service,
@@ -396,6 +409,7 @@ class ClientPool(BaseClientPool):
             keepalive=keepalive,
             tracking=tracking,
             tracker_factory=tracker_factory,
+            use_limit=use_limit,
         )
         self.host = host
         self.port = port
@@ -415,7 +429,8 @@ class HeartbeatClientPool(ClientPool):
 
     def __init__(self, service, host, port, timeout=30, name=None,
                  raise_empty=False, max_conn=30, connction_class=ThriftClient,
-                 keepalive=None, tracking=False, tracker_factory=None):
+                 keepalive=None, tracking=False, tracker_factory=None,
+                 use_limit=None):
         super(HeartbeatClientPool, self).__init__(
             service=service,
             host=host,
@@ -427,8 +442,9 @@ class HeartbeatClientPool(ClientPool):
             connction_class=connction_class,
             keepalive=keepalive,
             tracking=tracking,
-            tracker_factory=tracker_factory
-            )
+            tracker_factory=tracker_factory,
+            use_limit=use_limit,
+        )
         threading.Thread(target=self.maintain_connections).start()
 
     def _close_and_remove_client(self, client):
@@ -472,7 +488,8 @@ class HeartbeatClientPool(ClientPool):
 class MultiServerClientBase(BaseClientPool):
     def __init__(self, service, servers, timeout=30, name=None,
                  raise_empty=False, max_conn=30, connction_class=ThriftClient,
-                 keepalive=None, tracking=False, tracker_factory=None):
+                 keepalive=None, tracking=False, tracker_factory=None,
+                 use_limit=None):
         super(MultiServerClientBase, self).__init__(
             service=service,
             timeout=timeout,
@@ -483,7 +500,8 @@ class MultiServerClientBase(BaseClientPool):
             keepalive=keepalive,
             tracking=tracking,
             tracker_factory=None,
-            )
+            use_limit=use_limit,
+        )
 
         self.servers = list(servers)
 
