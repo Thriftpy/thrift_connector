@@ -2,7 +2,6 @@
 
 import time
 import logging
-import contextlib
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +33,7 @@ def api_call_context(pool, client, api_name):
             before_call.send(pool, client, api_name, now)
             ret = None
             try:
+                client.incr_use_count()
                 ret = func(*args, **kwargs)
                 return ret
             except Exception as e:
