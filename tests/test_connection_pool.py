@@ -175,6 +175,37 @@ def test_ttronsport_exception_not_put_back(
         c.ping()
 
 
+def test_should_not_put_back_connection_if_ttransport_exception_raised(
+        pingpong_thrift_client, pingpong_service_key, init_pingpong_pool):
+    pool = pingpong_thrift_client.pool
+
+    with pingpong_thrift_client.pool.connection_ctx() as c:
+        c.ping()
+
+    assert len(pool.connections) == 1
+    c.should_fail_api = Mock(side_effect=c.TTransportException)
+    with pytest.raises(c.TTransportException):
+        pool.should_fail_api()
+
+    assert len(pool.connections) == 0
+
+    with pingpong_thrift_client.pool.connection_ctx() as c:
+        c.ping()
+
+    assert len(pool.connections) == 1
+    c.should_fail_api = Mock(
+        side_effect=pingpong_thrift_client.service.AboutToShutDownException)
+
+    # If predefined exception occurs, conn should be put back and available.
+    with pytest.raises(
+            pingpong_thrift_client.service.AboutToShutDownException):
+        pool.should_fail_api()
+
+    assert len(pool.connections) == 1
+    assert list(pool.connections)[0] == c
+    pool.ping()
+
+
 def test_setted_connection_pool_connection_keepalive(
         pingpong_thrift_client, pingpong_service_key, pingpong_thrift_service,
         fake_datetime):
