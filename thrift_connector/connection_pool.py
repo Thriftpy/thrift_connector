@@ -63,7 +63,7 @@ class ThriftBaseClient(object):
     def is_expired(self):
         now = time.time()
         return (self.alive_until and now > self.alive_until and
-                random.random() < 1 - (now - self.alive_until)/self.keepalive)
+                random.random() < (now - self.alive_until)/self.keepalive)
 
     def incr_use_count(self):
         self.use_count += 1
@@ -259,6 +259,7 @@ class BaseClientPool(object):
         self.tracking = tracking
         self.tracker_factory = tracker_factory
         self.conn_close_callbacks = []
+        self.__api_method_cache = {}
 
     @contextlib.contextmanager
     def annotate(self, **kwds):
@@ -344,16 +345,25 @@ class BaseClientPool(object):
         return self.get_client_from_pool() or self.produce_client()
 
     def __getattr__(self, name):
-        def call(*args, **kwds):
-            client = self.get_client()
-            api = getattr(client, name, None)
-            try:
-                if api and callable(api):
-                    return api(*args, **kwds)
-                raise AttributeError("%s not found in %s" % (name, client))
-            finally:
-                self.put_back_connection(client)
-        return call
+        method = self.__api_method_cache.get(name)
+        if not method:
+            def method(*args, **kwds):
+                client = self.get_client()
+                api = getattr(client, name, None)
+                will_put_back = True
+                try:
+                    if api and callable(api):
+                        return api(*args, **kwds)
+                    raise AttributeError("%s not found in %s" % (name, client))
+                except client.TTransportException:
+                    will_put_back = False
+                    client.close()
+                    raise
+                finally:
+                    if will_put_back:
+                        self.put_back_connection(client)
+            self.__api_method_cache[name] = method
+        return method
 
     @contextlib.contextmanager
     def connection_ctx(self, timeout=None):

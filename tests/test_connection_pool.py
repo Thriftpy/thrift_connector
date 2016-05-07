@@ -2,9 +2,10 @@
 
 import os
 import time
-import datetime
+import time
 import signal
 import socket
+from datetime import timedelta
 
 import pytest
 from mock import Mock
@@ -17,12 +18,12 @@ from thriftpy.transport import TTransportException
 @pytest.fixture
 def fake_datetime(monkeypatch):
     class mock_datetime(object):
-        FAKE_TIME = datetime.datetime(2014, 10, 9)
+        FAKE_TIME = 1412784000.0
 
         @classmethod
-        def now(cls):
+        def time(cls):
             return cls.FAKE_TIME
-    monkeypatch.setattr(datetime, 'datetime', mock_datetime)
+    monkeypatch.setattr(time, 'time', mock_datetime.time)
     return mock_datetime
 
 
@@ -175,6 +176,37 @@ def test_ttronsport_exception_not_put_back(
         c.ping()
 
 
+def test_should_not_put_back_connection_if_ttransport_exception_raised(
+        pingpong_thrift_client, pingpong_service_key, init_pingpong_pool):
+    pool = pingpong_thrift_client.pool
+
+    with pingpong_thrift_client.pool.connection_ctx() as c:
+        c.ping()
+
+    assert len(pool.connections) == 1
+    c.should_fail_api = Mock(side_effect=c.TTransportException)
+    with pytest.raises(c.TTransportException):
+        pool.should_fail_api()
+
+    assert len(pool.connections) == 0
+
+    with pingpong_thrift_client.pool.connection_ctx() as c:
+        c.ping()
+
+    assert len(pool.connections) == 1
+    c.should_fail_api = Mock(
+        side_effect=pingpong_thrift_client.service.AboutToShutDownException)
+
+    # If predefined exception occurs, conn should be put back and available.
+    with pytest.raises(
+            pingpong_thrift_client.service.AboutToShutDownException):
+        pool.should_fail_api()
+
+    assert len(pool.connections) == 1
+    assert list(pool.connections)[0] == c
+    pool.ping()
+
+
 def test_setted_connection_pool_connection_keepalive(
         pingpong_thrift_client, pingpong_service_key, pingpong_thrift_service,
         fake_datetime):
@@ -190,16 +222,16 @@ def test_setted_connection_pool_connection_keepalive(
     )
     assert pool.keepalive == keep_alive
     with pool.connection_ctx() as conn:
-        now = datetime.datetime.now()
-        assert conn.alive_until == now + datetime.timedelta(seconds=keep_alive)
+        now = time.time()
+        assert conn.alive_until == now + keep_alive
         assert conn.test_connection()
         old_connection = conn
 
-    fake_datetime.FAKE_TIME = now + datetime.timedelta(seconds=0.1)
+    fake_datetime.FAKE_TIME = now + 0.1
     with pool.connection_ctx() as conn:
         assert conn is old_connection
 
-    fake_datetime.FAKE_TIME = now + datetime.timedelta(seconds=keep_alive + 1)
+    fake_datetime.FAKE_TIME = now + keep_alive + 2
     assert not old_connection.test_connection()
 
     with pool.connection_ctx() as conn:
@@ -219,16 +251,16 @@ def test_not_setted_connection_pool_connection_keepalive(
     )
     assert pool.keepalive is None
     with pool.connection_ctx() as conn:
-        now = datetime.datetime.now()
+        now = time.time()
         assert conn.alive_until is None
         assert conn.test_connection()
         old_connection = conn
 
-    fake_datetime.FAKE_TIME = now + datetime.timedelta(seconds=0.1)
+    fake_datetime.FAKE_TIME = now + 0.1
     with pool.connection_ctx() as conn:
         assert conn is old_connection
 
-    fake_datetime.FAKE_TIME = now + datetime.timedelta(days=100)
+    fake_datetime.FAKE_TIME = now + timedelta(days=100).seconds
     assert old_connection.test_connection()
 
     with pool.connection_ctx() as conn:
