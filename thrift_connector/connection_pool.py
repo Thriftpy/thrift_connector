@@ -63,7 +63,7 @@ class ThriftBaseClient(object):
     def is_expired(self):
         now = time.time()
         return (self.alive_until and now > self.alive_until and
-                random.random() < 1 - (now - self.alive_until)/self.keepalive)
+                random.random() < (now - self.alive_until)/self.keepalive)
 
     def incr_use_count(self):
         self.use_count += 1

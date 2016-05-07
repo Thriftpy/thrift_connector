@@ -2,9 +2,10 @@
 
 import os
 import time
-import datetime
+import time
 import signal
 import socket
+from datetime import timedelta
 
 import pytest
 from mock import Mock
@@ -17,12 +18,12 @@ from thriftpy.transport import TTransportException
 @pytest.fixture
 def fake_datetime(monkeypatch):
     class mock_datetime(object):
-        FAKE_TIME = datetime.datetime(2014, 10, 9)
+        FAKE_TIME = 1412784000.0
 
         @classmethod
-        def now(cls):
+        def time(cls):
             return cls.FAKE_TIME
-    monkeypatch.setattr(datetime, 'datetime', mock_datetime)
+    monkeypatch.setattr(time, 'time', mock_datetime.time)
     return mock_datetime
 
 
@@ -221,16 +222,16 @@ def test_setted_connection_pool_connection_keepalive(
     )
     assert pool.keepalive == keep_alive
     with pool.connection_ctx() as conn:
-        now = datetime.datetime.now()
-        assert conn.alive_until == now + datetime.timedelta(seconds=keep_alive)
+        now = time.time()
+        assert conn.alive_until == now + keep_alive
         assert conn.test_connection()
         old_connection = conn
 
-    fake_datetime.FAKE_TIME = now + datetime.timedelta(seconds=0.1)
+    fake_datetime.FAKE_TIME = now + 0.1
     with pool.connection_ctx() as conn:
         assert conn is old_connection
 
-    fake_datetime.FAKE_TIME = now + datetime.timedelta(seconds=keep_alive + 1)
+    fake_datetime.FAKE_TIME = now + keep_alive + 2
     assert not old_connection.test_connection()
 
     with pool.connection_ctx() as conn:
@@ -250,16 +251,16 @@ def test_not_setted_connection_pool_connection_keepalive(
     )
     assert pool.keepalive is None
     with pool.connection_ctx() as conn:
-        now = datetime.datetime.now()
+        now = time.time()
         assert conn.alive_until is None
         assert conn.test_connection()
         old_connection = conn
 
-    fake_datetime.FAKE_TIME = now + datetime.timedelta(seconds=0.1)
+    fake_datetime.FAKE_TIME = now + 0.1
     with pool.connection_ctx() as conn:
         assert conn is old_connection
 
-    fake_datetime.FAKE_TIME = now + datetime.timedelta(days=100)
+    fake_datetime.FAKE_TIME = now + timedelta(days=100).seconds
     assert old_connection.test_connection()
 
     with pool.connection_ctx() as conn:
