@@ -13,6 +13,10 @@ logger = logging.getLogger(__name__)
 SIGNAL_CLOSE_NAME = "close"
 
 
+class ConnectionError(Exception):
+    pass
+
+
 def validate_host_port(host, port):
     if not all((host, port)):
         raise RuntimeError("host and port not valid: %r:%r" % (host, port))
@@ -52,7 +56,9 @@ class ThriftBaseClient(object):
     def init_client(self, client):
         pass
 
-    def close(self):
+    def close(self, callback=None):
+        if callback is not None:
+            callback(self)
         try:
             self.transport.close()
         except Exception as e:
@@ -281,9 +287,12 @@ class BaseClientPool(object):
     def pool_size(self):
         return len(self.connections)
 
+    def remove_from_pools(self, conn):
+        self.connections.remove(conn)
+
     def clear(self):
         old_connections = self.connections
-        self.connections = set()
+        self.connections.clear()
         self.generation += 1
 
         for c in old_connections:
@@ -296,24 +305,20 @@ class BaseClientPool(object):
         if connection.test_connection():  # make sure old connection is usable
             return connection
         else:
-            connection.close()
+            connection.close(callback=self.remove_from_pools)
 
     def _get_connection(self):
-        if not self.connections:
-            if self.raise_empty:
-                raise self.Empty
-            return None
         try:
             return self.connections.pop()
         # When only one connection left, just return None if it
         # has already been popped in another thread.
         except KeyError:
-            return None
+            conn = self.produce_client()
+            return conn
 
     def put_back_connection(self, conn):
         assert isinstance(conn, ThriftBaseClient)
-        if self.max_conn > 0 and len(self.connections) < self.max_conn and\
-                conn.pool_generation == self.generation:
+        if conn.pool_generation == self.generation:
             if self.timeout != conn.get_timeout():
                 conn.set_client_timeout(self.timeout * 1000)
             self.connections.add(conn)
@@ -328,7 +333,9 @@ class BaseClientPool(object):
         elif not all((host, port)):
             raise ValueError("host and port should be 'both none' \
                              or 'both provided' ")
-        return self.connction_class.connect(
+        if self.pool_size >= self.max_conn:
+            raise ConnectionError('Too many connections')
+        conn = self.connction_class.connect(
             self.service,
             host,
             port,
@@ -340,9 +347,13 @@ class BaseClientPool(object):
             pool=self,
             use_limit=self.use_limit,
         )
+        res = self.put_back_connection(conn)
+        if not res:
+            logger.warning('Pool has been cleared.')
+        return conn
 
     def get_client(self):
-        return self.get_client_from_pool() or self.produce_client()
+        return self.get_client_from_pool()
 
     def __getattr__(self, name):
         method = self.__api_method_cache.get(name)
@@ -350,18 +361,13 @@ class BaseClientPool(object):
             def method(*args, **kwds):
                 client = self.get_client()
                 api = getattr(client, name, None)
-                will_put_back = True
                 try:
                     if api and callable(api):
                         return api(*args, **kwds)
                     raise AttributeError("%s not found in %s" % (name, client))
                 except client.TTransportException:
-                    will_put_back = False
-                    client.close()
+                    client.close(callback=self.remove_from_pools)
                     raise
-                finally:
-                    if will_put_back:
-                        self.put_back_connection(client)
             self.__api_method_cache[name] = method
         return method
 
@@ -372,12 +378,10 @@ class BaseClientPool(object):
             client.set_client_timeout(timeout * 1000)
         try:
             yield client
-            self.put_back_connection(client)
         except client.TTransportException:
-            client.close()
+            client.close(callback=self.remove_from_pools)
             raise
         except Exception:
-            self.put_back_connection(client)
             raise
 
     @contextlib.contextmanager
@@ -388,7 +392,7 @@ class BaseClientPool(object):
         except Exception:
             raise
         finally:
-            client.close()
+            client.close(callback=self.remove_from_pools)
 
     def register_after_close_func(self, func):
         self.conn_close_callbacks.append(func)
@@ -462,8 +466,7 @@ class HeartbeatClientPool(ClientPool):
             return
 
         try:
-            self.connections.remove(client)
-            client.close()
+            client.close(callback=self.remove_from_pools)
         except KeyError as e:
             logger.warn('Error removing client from pool %s, %s',
                         self.service.__name__, e)
@@ -489,10 +492,8 @@ class HeartbeatClientPool(ClientPool):
 
                 count += 1
 
-                if conn.test_connection():
-                    self.put_back_connection(conn)
-                else:
-                    conn.close()
+                if not conn.test_connection():
+                    conn.close(callback=self.remove_from_pools)
 
 
 class MultiServerClientBase(BaseClientPool):
