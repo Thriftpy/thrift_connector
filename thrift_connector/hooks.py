@@ -29,18 +29,20 @@ after_call = ThriftConnectorHook('after_call')
 def api_call_context(pool, client, api_name):
     def deco(func):
         def wrapper(*args, **kwargs):
-            now = time.time()
-            before_call.send(pool, client, api_name, now)
+            start = time.time()
+            before_call.send(pool, client, api_name, start)
             ret = None
             try:
-                client.incr_use_count()
                 ret = func(*args, **kwargs)
                 return ret
             except Exception as e:
                 ret = e
                 raise
             finally:
-                cost = time.time() - now
-                after_call.send(pool, client, api_name, now, cost, ret)
+                now = time.time()
+                client.incr_use_count()
+                client.set_latest_use_time(now)
+                cost = now - start
+                after_call.send(pool, client, api_name, start, cost, ret)
         return wrapper
     return deco
