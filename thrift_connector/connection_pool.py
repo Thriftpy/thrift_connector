@@ -80,7 +80,6 @@ class ThriftBaseClient(object):
             return False
         try:
             self.ping()
-            self.set_latest_use_time(time.time())
             return True
         except:
             return False
@@ -481,7 +480,7 @@ class HeartbeatClientPool(ClientPool):
         return self._get_connection()
 
     def maintain_connections(self):
-        sleep_time = min(self.check_interval-1, self.timeout-5)
+        sleep_time = max(1, self.timeout-5)
 
         while True:
             time.sleep(sleep_time)
