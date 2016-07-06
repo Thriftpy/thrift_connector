@@ -460,7 +460,9 @@ class HeartbeatClientPool(ClientPool):
             use_limit=use_limit,
         )
         self.check_interval = check_interval
-        threading.Thread(target=self.maintain_connections).start()
+        t = threading.Thread(target=self.maintain_connections)
+        t.daemon = True
+        t.start()
 
     def _close_and_remove_client(self, client):
         if client not in self.connections:
