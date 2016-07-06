@@ -348,31 +348,41 @@ def test_roundrobin_multiconnection_pool(
 def test_heartbeat_client_pool(
         pingpong_thrift_client, pingpong_service_key, pingpong_thrift_service,
         fake_datetime):
-    heartbeat_pool = HeartbeatClientPool(
-        pingpong_thrift_service,
-        host=pingpong_thrift_client.host,
-        port=pingpong_thrift_client.port,
-        timeout=3,
-        connction_class=pingpong_thrift_client.pool.connction_class,
-        max_conn=1
-    )
 
-    conn1 = heartbeat_pool.get_client()
-    assert conn1.test_connection()
+    def _test(sleep_time):
+        heartbeat_pool = HeartbeatClientPool(
+            pingpong_thrift_service,
+            host=pingpong_thrift_client.host,
+            port=pingpong_thrift_client.port,
+            timeout=5,
+            connction_class=pingpong_thrift_client.pool.connction_class,
+            max_conn=1,
+            check_interval=3,
+        )
+        conn1 = heartbeat_pool.get_client()
+        assert conn1.test_connection()
 
-    # now we kill client and put back to pool
-    conn1.close()
-    heartbeat_pool.put_back_connection(conn1)
+        # now we kill client and put back to pool
+        conn1.close()
+        heartbeat_pool.put_back_connection(conn1)
+        assert heartbeat_pool.pool_size() == 1
 
-    # this call should fail
-    disconnected_client = heartbeat_pool.get_client()
-    assert not disconnected_client.test_connection()
-    assert heartbeat_pool.put_back_connection(disconnected_client)
+        # this call should fail
+        disconnected_client = heartbeat_pool.get_client()
+        assert not disconnected_client.test_connection()
+        assert heartbeat_pool.put_back_connection(disconnected_client)
+        assert heartbeat_pool.pool_size() == 1
 
-    time.sleep(3)
-    # disconnection should be detected and dead clients removed
-    new_client = heartbeat_pool.get_client()
-    assert new_client.test_connection()
+        time.sleep(sleep_time)
+        # disconnection should be detected and dead clients removed
+        assert heartbeat_pool.pool_size() == 0
+        new_client = heartbeat_pool.get_client()
+        assert new_client.test_connection()
+
+    # after check_interval, connection need check, but connection is dead
+    _test(3)
+    # the alive_until passed
+    _test(5)
 
 
 def test_api_call_context(

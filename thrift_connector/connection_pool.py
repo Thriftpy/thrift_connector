@@ -36,6 +36,7 @@ class ThriftBaseClient(object):
         self.tracker_factory = tracker_factory
         self.socket = socket
         self.pool = pool
+        self.latest_use_time = time.time()
 
         self.client = self.get_tclient(service, protocol)
         self.init_client(self.client)
@@ -68,6 +69,9 @@ class ThriftBaseClient(object):
     def incr_use_count(self):
         self.use_count += 1
 
+    def set_latest_use_time(self, time):
+        self.latest_use_time = time
+
     def is_tired(self):
         return self.use_limit and self.use_count > self.use_limit
 
@@ -76,6 +80,7 @@ class ThriftBaseClient(object):
             return False
         try:
             self.ping()
+            self.set_latest_use_time(time.time())
             return True
         except:
             return False
@@ -312,7 +317,7 @@ class BaseClientPool(object):
 
     def put_back_connection(self, conn):
         assert isinstance(conn, ThriftBaseClient)
-        if self.max_conn > 0 and len(self.connections) < self.max_conn and\
+        if self.max_conn > 0 and self.pool_size() < self.max_conn and\
                 conn.pool_generation == self.generation:
             if self.timeout != conn.get_timeout():
                 conn.set_client_timeout(self.timeout * 1000)
@@ -440,7 +445,7 @@ class HeartbeatClientPool(ClientPool):
     def __init__(self, service, host, port, timeout=30, name=None,
                  raise_empty=False, max_conn=30, connction_class=ThriftClient,
                  keepalive=None, tracking=False, tracker_factory=None,
-                 use_limit=None):
+                 use_limit=None, check_interval=10):
         super(HeartbeatClientPool, self).__init__(
             service=service,
             host=host,
@@ -455,6 +460,7 @@ class HeartbeatClientPool(ClientPool):
             tracker_factory=tracker_factory,
             use_limit=use_limit,
         )
+        self.check_interval = check_interval
         threading.Thread(target=self.maintain_connections).start()
 
     def _close_and_remove_client(self, client):
@@ -475,21 +481,19 @@ class HeartbeatClientPool(ClientPool):
         return self._get_connection()
 
     def maintain_connections(self):
-        sleep_time = max([1, self.timeout - 5])
+        sleep_time = min(self.check_interval-1, self.timeout-5)
+
         while True:
             time.sleep(sleep_time)
-            count = 0
+
             pool_size = self.pool_size()
-
-            while count < pool_size:
+            for _ in range(pool_size):
                 conn = self.get_client_from_pool()
-
                 if conn is None:
                     break
 
-                count += 1
-
-                if conn.test_connection():
+                if (time.time()-conn.latest_use_time < self.check_interval
+                        or conn.test_connection()):
                     self.put_back_connection(conn)
                 else:
                     conn.close()
