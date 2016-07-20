@@ -48,6 +48,9 @@ class ThriftBaseClient(object):
         )
 
     def __getattr__(self, name):
+        # XXX
+        if name == 'client':
+            raise RuntimeError('Client has not initialize.')
         return getattr(self.client, name)
 
     def init_client(self, client):
