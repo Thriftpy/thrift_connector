@@ -44,7 +44,7 @@ class ThriftBaseClient(object):
     def __repr__(self):
         return "<%s service=%s>" % (
             self.__class__.__name__,
-            self.client.__class__.__module__
+            self.service.__name__
         )
 
     def __getattr__(self, name):
