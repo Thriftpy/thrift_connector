@@ -44,13 +44,10 @@ class ThriftBaseClient(object):
     def __repr__(self):
         return "<%s service=%s>" % (
             self.__class__.__name__,
-            self.client.__class__.__module__
+            self.service.__name__
         )
 
     def __getattr__(self, name):
-        # XXX
-        if name == 'client':
-            raise RuntimeError('Client has not initialize.')
         return getattr(self.client, name)
 
     def init_client(self, client):
