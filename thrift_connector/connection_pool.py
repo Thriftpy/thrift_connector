@@ -444,6 +444,11 @@ class ClientPool(BaseClientPool):
         self.port = port
         self.clear()
 
+    def fill_connection_pool(self):
+        raise RuntimeError(
+            '{!r} class not support to fill connection pool'.format(
+                self.__class__.__name__))
+
     def yield_server(self):
         return self.host, self.port
 
