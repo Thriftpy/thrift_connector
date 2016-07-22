@@ -282,6 +282,15 @@ class BaseClientPool(object):
             self.keys()
         )
 
+    def fill_connection_pool(self):
+        """Fill connections pool
+        """
+        rest_size = self.max_conn - self.pool_size
+        for _ in range(rest_size):
+            conn = self.produce_client()
+            self.put_back_connection(conn)
+        assert self.max_conn == self.pool_size, 'not fill connections pool'
+
     def pool_size(self):
         return len(self.connections)
 
