@@ -282,6 +282,14 @@ class BaseClientPool(object):
             self.keys()
         )
 
+    def fill_connection_pool(self):
+        """Fill connections pool
+        """
+        rest_size = self.max_conn - self.pool_size
+        for _ in range(rest_size):
+            conn = self.produce_client()
+            self.put_back_connection(conn)
+
     def pool_size(self):
         return len(self.connections)
 
@@ -434,6 +442,11 @@ class ClientPool(BaseClientPool):
         self.host = host
         self.port = port
         self.clear()
+
+    def fill_connection_pool(self):
+        raise RuntimeError(
+            '{!r} class not support to fill connection pool'.format(
+                self.__class__.__name__))
 
     def yield_server(self):
         return self.host, self.port
