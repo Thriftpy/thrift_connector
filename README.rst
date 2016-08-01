@@ -73,3 +73,10 @@ Examples for thrift is:
     print "Receive:", pool.ping()
     print "Winning the match..."
     print "Receive:", pool.win()
+
+Test
+----
+
+.. code:: python
+
+    py.test tests

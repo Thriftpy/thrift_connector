@@ -15,6 +15,7 @@ except ImportError:
 
 from thrift_connector.connection_pool import (
     ClientPool,
+    BaseClientPool,
     RoundRobinMultiServerClient,
     RandomMultiServerClient,
     HeartbeatClientPool,
@@ -462,3 +463,18 @@ def test_set_timeout(pingpong_thrift_client, pingpong_service_key,
         with pool.connection_ctx(timeout=1) as client:
             client.sleep(2)
     assert 'timed out' in str(e.value)
+
+
+def test_fill_conneciont_pool(pingpong_thrift_client, pingpong_service_key,
+                              pingpong_thrift_service, monkeypatch):
+    pool = BaseClientPool(
+        pingpong_thrift_service,
+        connction_class=pingpong_thrift_client.pool.connction_class,
+    )
+    assert pool.max_conn == 30
+    assert pool.pool_size() == 0
+    pool.yield_server = Mock(
+        return_value=(
+            pingpong_thrift_client.host, pingpong_thrift_client.port))
+    pool.fill_connection_pool()
+    assert pool.pool_size() == pool.max_conn
