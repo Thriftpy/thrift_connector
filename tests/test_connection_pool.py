@@ -421,6 +421,17 @@ def test_api_call_context(
     mock_after_hook.assert_called_with(pool, client, 'ping', fake_time.time(),
                                        0, 'pong')
 
+    # raise Exception when raises specified
+    mock_before_hook_with_err = Mock(side_effect=TypeError('test'))
+    before_call.register(mock_before_hook_with_err, raises=(TypeError,))
+    with pool.connection_ctx() as client:
+        with pytest.raises(TypeError) as exc_info:
+            client.win()
+
+    assert "test" in str(exc_info.value)
+    before_call.callbacks.clear()
+    after_call.callbacks.clear()
+
 
 def test_conn_close_hook(pingpong_thrift_client, pingpong_service_key,
                          pingpong_thrift_service, fake_time):

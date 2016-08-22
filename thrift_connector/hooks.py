@@ -9,16 +9,18 @@ logger = logging.getLogger(__name__)
 class ThriftConnectorHook(object):
     def __init__(self, name):
         self.name = name
-        self.callbacks = []
+        self.callbacks = set()
 
-    def register(self, callback):
-        self.callbacks.append(callback)
+    def register(self, callback, raises=None):
+        self.callbacks.add((callback, raises))
 
     def send(self, *args, **kwds):
-        for c in self.callbacks:
+        for (callback, raises) in self.callbacks:
             try:
-                c(*args, **kwds)
+                callback(*args, **kwds)
             except Exception as e:
+                if raises and any(isinstance(e, ec) for ec in raises):
+                    raise e
                 logger.warning(e, exc_info=True)
 
 
