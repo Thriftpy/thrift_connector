@@ -57,7 +57,7 @@ class ThriftBaseClient(object):
         try:
             self.transport.close()
         except Exception as e:
-            logger.warn("Connction close failed: %r" % e)
+            logger.warn("Connection close failed: %r" % e)
         finally:
             self.pool.signal_handler(SIGNAL_CLOSE_NAME, self)
 
@@ -245,7 +245,7 @@ class ThriftPyCyClient(ThriftPyBaseClient):
 
 class BaseClientPool(object):
     def __init__(self, service, timeout=30, name=None, raise_empty=False,
-                 max_conn=30, connction_class=ThriftClient, keepalive=None,
+                 max_conn=30, connection_class=ThriftClient, keepalive=None,
                  tracking=False, tracker_factory=None, use_limit=None):
         if service is None:
             raise RuntimeError("Service cannot be None")
@@ -256,7 +256,7 @@ class BaseClientPool(object):
         self.connections = set()
         self.raise_empty = raise_empty
         self.max_conn = max_conn
-        self.connction_class = connction_class
+        self.connection_class = connection_class
         self.keepalive = keepalive
         self.use_limit = use_limit
         self.generation = 0
@@ -340,7 +340,7 @@ class BaseClientPool(object):
         elif not all((host, port)):
             raise ValueError("host and port should be 'both none' \
                              or 'both provided' ")
-        return self.connction_class.connect(
+        return self.connection_class.connect(
             self.service,
             host,
             port,
@@ -417,7 +417,7 @@ class BaseClientPool(object):
 
 class ClientPool(BaseClientPool):
     def __init__(self, service, host, port, timeout=30, name=None,
-                 raise_empty=False, max_conn=30, connction_class=ThriftClient,
+                 raise_empty=False, max_conn=30, connection_class=ThriftClient,
                  keepalive=None, tracking=False, tracker_factory=None,
                  use_limit=None):
         validate_host_port(host, port)
@@ -427,7 +427,7 @@ class ClientPool(BaseClientPool):
             name=name,
             raise_empty=raise_empty,
             max_conn=max_conn,
-            connction_class=connction_class,
+            connection_class=connection_class,
             keepalive=keepalive,
             tracking=tracking,
             tracker_factory=tracker_factory,
@@ -455,7 +455,7 @@ class ClientPool(BaseClientPool):
 class HeartbeatClientPool(ClientPool):
 
     def __init__(self, service, host, port, timeout=30, name=None,
-                 raise_empty=False, max_conn=30, connction_class=ThriftClient,
+                 raise_empty=False, max_conn=30, connection_class=ThriftClient,
                  keepalive=None, tracking=False, tracker_factory=None,
                  use_limit=None, check_interval=10):
         super(HeartbeatClientPool, self).__init__(
@@ -466,7 +466,7 @@ class HeartbeatClientPool(ClientPool):
             name=name,
             raise_empty=raise_empty,
             max_conn=max_conn,
-            connction_class=connction_class,
+            connection_class=connection_class,
             keepalive=keepalive,
             tracking=tracking,
             tracker_factory=tracker_factory,
@@ -515,7 +515,7 @@ class HeartbeatClientPool(ClientPool):
 
 class MultiServerClientBase(BaseClientPool):
     def __init__(self, service, servers, timeout=30, name=None,
-                 raise_empty=False, max_conn=30, connction_class=ThriftClient,
+                 raise_empty=False, max_conn=30, connection_class=ThriftClient,
                  keepalive=None, tracking=False, tracker_factory=None,
                  use_limit=None):
         super(MultiServerClientBase, self).__init__(
@@ -524,7 +524,7 @@ class MultiServerClientBase(BaseClientPool):
             name=name,
             raise_empty=raise_empty,
             max_conn=max_conn,
-            connction_class=connction_class,
+            connection_class=connection_class,
             keepalive=keepalive,
             tracking=tracking,
             tracker_factory=None,

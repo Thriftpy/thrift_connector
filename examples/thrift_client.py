@@ -7,7 +7,7 @@ pool = ClientPool(
     PingService,
     'localhost',
     8880,
-    connction_class=ThriftClient
+    connection_class=ThriftClient
     )
 
 print "Sending Ping..."

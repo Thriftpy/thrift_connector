@@ -225,7 +225,7 @@ def test_setted_connection_pool_connection_keepalive(
         pingpong_thrift_client.port,
         name=pingpong_service_key,
         raise_empty=False, max_conn=3,
-        connction_class=pingpong_thrift_client.pool.connction_class,
+        connection_class=pingpong_thrift_client.pool.connection_class,
         keepalive=keep_alive
     )
     assert pool.keepalive == keep_alive
@@ -255,7 +255,7 @@ def test_not_setted_connection_pool_connection_keepalive(
         pingpong_thrift_client.port,
         name=pingpong_service_key,
         raise_empty=False, max_conn=3,
-        connction_class=pingpong_thrift_client.pool.connction_class,
+        connection_class=pingpong_thrift_client.pool.connection_class,
     )
     assert pool.keepalive is None
     with pool.connection_ctx() as conn:
@@ -284,7 +284,7 @@ def test_connection_pool_generation(
         pingpong_thrift_client.port,
         name=pingpong_service_key,
         raise_empty=False, max_conn=3,
-        connction_class=pingpong_thrift_client.pool.connction_class,
+        connection_class=pingpong_thrift_client.pool.connection_class,
     )
     c = pool.produce_client()
     assert c.pool_generation == pool.generation == 0
@@ -314,7 +314,7 @@ def test_random_multiconnection_pool(
         servers=servers,
         name=pingpong_service_key,
         raise_empty=False, max_conn=3,
-        connction_class=pingpong_thrift_client.pool.connction_class,
+        connection_class=pingpong_thrift_client.pool.connection_class,
     )
 
     with random_pool.connection_ctx() as conn:
@@ -334,7 +334,7 @@ def test_roundrobin_multiconnection_pool(
         servers=servers,
         name=pingpong_service_key,
         raise_empty=False, max_conn=3,
-        connction_class=pingpong_thrift_client.pool.connction_class,
+        connection_class=pingpong_thrift_client.pool.connection_class,
     )
 
     conn1 = roundrobin_pool.produce_client()
@@ -361,7 +361,7 @@ def test_heartbeat_client_pool(
         host=pingpong_thrift_client.host,
         port=pingpong_thrift_client.port,
         timeout=1,
-        connction_class=pingpong_thrift_client.pool.connction_class,
+        connection_class=pingpong_thrift_client.pool.connection_class,
         max_conn=1,
         check_interval=2,
     )
@@ -407,7 +407,7 @@ def test_api_call_context(
         pingpong_thrift_client.port,
         name=pingpong_service_key,
         raise_empty=False, max_conn=3,
-        connction_class=pingpong_thrift_client.pool.connction_class,
+        connection_class=pingpong_thrift_client.pool.connection_class,
     )
     pool.ping()
 
@@ -441,7 +441,7 @@ def test_conn_close_hook(pingpong_thrift_client, pingpong_service_key,
         pingpong_thrift_client.port,
         name=pingpong_service_key,
         raise_empty=False, max_conn=3,
-        connction_class=pingpong_thrift_client.pool.connction_class,
+        connection_class=pingpong_thrift_client.pool.connection_class,
     )
     close_mock = Mock()
     pool.register_after_close_func(close_mock)
@@ -458,7 +458,7 @@ def test_set_timeout(pingpong_thrift_client, pingpong_service_key,
         pingpong_thrift_client.port,
         name=pingpong_service_key,
         raise_empty=False, max_conn=3,
-        connction_class=pingpong_thrift_client.pool.connction_class,
+        connection_class=pingpong_thrift_client.pool.connection_class,
     )
     client = pool.get_client()
 
@@ -480,7 +480,7 @@ def test_fill_conneciont_pool(pingpong_thrift_client, pingpong_service_key,
                               pingpong_thrift_service, monkeypatch):
     pool = BaseClientPool(
         pingpong_thrift_service,
-        connction_class=pingpong_thrift_client.pool.connction_class,
+        connection_class=pingpong_thrift_client.pool.connection_class,
     )
     assert pool.max_conn == 30
     assert pool.pool_size() == 0
