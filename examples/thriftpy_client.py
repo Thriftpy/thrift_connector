@@ -8,7 +8,7 @@ pool = ClientPool(
     service.PingService,
     'localhost',
     8880,
-    connction_class=ThriftPyCyClient
+    connection_class=ThriftPyCyClient
     )
 
 print "Sending Ping..."
