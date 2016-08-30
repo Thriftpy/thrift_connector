@@ -45,7 +45,7 @@ Examples for thriftpy is:
         service.PingService,
         'localhost',
         8880,
-        conncetion_class=connection_pool.ThriftPyCyClient
+        connection_class=connection_pool.ThriftPyCyClient
         )
 
     print "Sending Ping..."
