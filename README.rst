@@ -24,7 +24,7 @@ port
     Whether to raise exception if pool is empty while trying to obtain a connection.
 [max_conn]
     Number of connections to manage in pool.
-[connction_class]
+[connection_class]
     Connection class implementation. Builtin classes are: `ThriftClient` for native thrift, `ThriftPyClient` and `ThriftPyCyClient` for thriftpy, the latter one utilizes Cython for better performance.
 [keepalive]
     Seconds each connection is able to stay alive. If oen connection has lived longer than this period, it will be closed.
@@ -45,7 +45,7 @@ Examples for thriftpy is:
         service.PingService,
         'localhost',
         8880,
-        connction_class=connection_pool.ThriftPyCyClient
+        conncetion_class=connection_pool.ThriftPyCyClient
         )
 
     print "Sending Ping..."
@@ -66,7 +66,7 @@ Examples for thrift is:
         PingService,
         'localhost',
         8880,
-        connction_class=connection_pool.ThriftClient
+        connection_class=connection_pool.ThriftClient
         )
 
     print "Sending Ping..."
