@@ -44,7 +44,7 @@ def api_call_context(pool, client, api_name):
                 now = time.time()
                 client.incr_use_count()
                 client.set_latest_use_time(now)
-                cost = now - start
+                cost = (now - start) * 1000
                 after_call.send(pool, client, api_name, start, cost, ret)
         return wrapper
     return deco
