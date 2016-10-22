@@ -6,6 +6,8 @@ import random
 import threading
 import time
 
+from collections import deque
+
 from .hooks import api_call_context
 
 logger = logging.getLogger(__name__)
@@ -244,6 +246,8 @@ class ThriftPyCyClient(ThriftPyBaseClient):
 
 
 class BaseClientPool(object):
+    QueueCls = deque
+
     def __init__(self, service, timeout=30, name=None, raise_empty=False,
                  max_conn=30, connection_class=ThriftClient, keepalive=None,
                  tracking=False, tracker_factory=None, use_limit=None):
@@ -253,7 +257,7 @@ class BaseClientPool(object):
         self.service = service
         self.timeout = timeout
         self.name = name or service.__name__
-        self.connections = set()
+        self.connections = self.QueueCls()
         self.raise_empty = raise_empty
         self.max_conn = max_conn
         self.connection_class = connection_class
@@ -295,7 +299,7 @@ class BaseClientPool(object):
 
     def clear(self):
         old_connections = self.connections
-        self.connections = set()
+        self.connections = self.QueueCls()
         self.generation += 1
 
         for c in old_connections:
@@ -316,10 +320,10 @@ class BaseClientPool(object):
                 raise self.Empty
             return None
         try:
-            return self.connections.pop()
+            return self.connections.popleft()
         # When only one connection left, just return None if it
         # has already been popped in another thread.
-        except KeyError:
+        except IndexError:
             return None
 
     def put_back_connection(self, conn):
@@ -328,7 +332,7 @@ class BaseClientPool(object):
                 conn.pool_generation == self.generation:
             if self.timeout != conn.get_timeout():
                 conn.set_client_timeout(self.timeout * 1000)
-            self.connections.add(conn)
+            self.connections.append(conn)
             return True
         else:
             conn.close()
