@@ -464,8 +464,8 @@ class HeartbeatClientPoolTest(_AsyncTestCase):
         self.assertEqual(heartbeat_pool.pool_size(), 5)
         # after check_interval, connection need check, but connection is dead
         yield gen.sleep(2)
-        # disconnection should be detected and dead clients removed
-        self.assertEqual(heartbeat_pool.pool_size(), 4)
+        # disconnection should be detected and dead clients removed (1 client may not be counted if it is being checked)
+        self.assertIn(heartbeat_pool.pool_size(), (3, 4))
 
         # Make sure all clients have been checked
         use_counts = [client.use_count for client in heartbeat_pool.connections]
