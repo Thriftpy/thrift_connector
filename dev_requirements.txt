@@ -9,7 +9,7 @@ py==1.4.25
 pyflakes==0.8.1
 pytest==2.6.3
 setproctitle==1.1.8
-thrift==0.9.1
+thrift==0.9.3
 wsgiref==0.1.2
 thriftpy==0.3.9
 tornado==4.4.2

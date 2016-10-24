@@ -74,6 +74,8 @@ Examples for thrift is:
     print "Winning the match..."
     print "Receive:", pool.win()
 
+Examples for Tornado clients can be found in `examples`.
+
 Test
 ----
 
