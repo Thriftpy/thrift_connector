@@ -1,6 +1,6 @@
 flake8==2.2.4
-gevent==1.0.1
-greenlet==0.4.4
+gevent==1.1.2
+greenlet==0.4.10
 gunicorn==19.1.1
 gunicorn-thrift==0.0.8
 mccabe==0.2.1
@@ -11,4 +11,6 @@ pytest==2.6.3
 setproctitle==1.1.8
 thrift==0.9.1
 wsgiref==0.1.2
-thriftpy==0.1.13
+thriftpy==0.3.9
+tornado==4.4.2
+toro==1.0.1
