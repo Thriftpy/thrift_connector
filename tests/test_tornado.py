@@ -473,6 +473,10 @@ class HeartbeatClientPoolTest(_AsyncTestCase):
         use_counts = [client.use_count for client in heartbeat_pool.connections]
         self.assertTrue(all(use_counts))
 
+        heartbeat_pool.clear()
+
+        yield gen.sleep(1)
+
 
 @pytest.mark.usefixtures('tornado_pingpong_thrift_client')
 class APICallContextTest(_AsyncTestCase):

@@ -397,6 +397,10 @@ def test_heartbeat_client_pool(
     use_counts = [client.use_count for client in heartbeat_pool.connections]
     assert all(use_counts)
 
+    heartbeat_pool.clear()
+
+    time.sleep(1)
+
 
 def test_api_call_context(
         pingpong_thrift_client, pingpong_service_key, pingpong_thrift_service,
