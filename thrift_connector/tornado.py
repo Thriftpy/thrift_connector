@@ -276,20 +276,6 @@ class TornadoHeartbeatClientPool(TornadoClientPool):
         self._heartbeat_timer = PeriodicCallback(self.maintain_connections, max(1, self.timeout - 5) * 1000)
         self._heartbeat_timer.start()
 
-    def _close_and_remove_client(self, client):
-        if client not in self.connections:
-            return
-
-        try:
-            self.connections.remove(client)
-            client.close()
-        except KeyError as e:
-            logger.warn('Error removing client from pool %s, %s',
-                        self.service.__name__, e)
-        except Exception as e:
-            logger.warn('Error closing client %s, %s',
-                        self.service.__name__, e)
-
     def get_client_from_pool(self):
         future = Future()
         future.set_result(self._get_connection())
