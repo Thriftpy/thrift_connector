@@ -362,7 +362,7 @@ def test_heartbeat_client_pool(
         port=pingpong_thrift_client.port,
         timeout=1,
         connection_class=pingpong_thrift_client.pool.connection_class,
-        max_conn=5,
+        max_conn=3,
         check_interval=2,
     )
 
@@ -380,20 +380,26 @@ def test_heartbeat_client_pool(
     assert heartbeat_pool.put_back_connection(disconnected_client)
     assert heartbeat_pool.pool_size() == 1
 
-    for _ in range(4):
+    time.sleep(1)
+    assert heartbeat_pool.pool_size() == 1
+    # after check_interval, connection need check, but connection is dead
+    time.sleep(2)
+    # disconnection should be detected and dead clients removed (1 client may not be counted if it is being checked)
+    assert heartbeat_pool.pool_size() == 0
+
+    for _ in range(3):
         conn = heartbeat_pool.produce_client()
         heartbeat_pool.put_back_connection(conn)
 
-    time.sleep(1)
-    assert heartbeat_pool.pool_size() == 5
-    # after check_interval, connection need check, but connection is dead
-    time.sleep(2)
-    # disconnection should be detected and dead clients removed
-    assert heartbeat_pool.pool_size() == 4
+    time.sleep(4)
 
     # Make sure all clients have been checked
     use_counts = [client.use_count for client in heartbeat_pool.connections]
     assert all(use_counts)
+
+    heartbeat_pool.clear()
+
+    time.sleep(1)
 
 
 def test_api_call_context(

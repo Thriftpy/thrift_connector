@@ -481,20 +481,6 @@ class HeartbeatClientPool(ClientPool):
         t.daemon = True
         t.start()
 
-    def _close_and_remove_client(self, client):
-        if client not in self.connections:
-            return
-
-        try:
-            self.connections.remove(client)
-            client.close()
-        except KeyError as e:
-            logger.warn('Error removing client from pool %s, %s',
-                        self.service.__name__, e)
-        except Exception as e:
-            logger.warn('Error closing client %s, %s',
-                        self.service.__name__, e)
-
     def get_client_from_pool(self):
         return self._get_connection()
 
