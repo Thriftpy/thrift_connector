@@ -1,6 +1,13 @@
 Changelog
 ==========
 
+0.22
+-----
+
+* Add tornado support.
+* Use deque instead of set to store connections in pool.
+
+
 0.15
 -----
 
