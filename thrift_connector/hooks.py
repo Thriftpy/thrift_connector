@@ -12,6 +12,9 @@ class ThriftConnectorHook(object):
         self.callbacks = set()
 
     def register(self, callback, raises=None):
+        if isinstance(raises, list):
+            raises = tuple(raises)
+
         self.callbacks.add((callback, raises))
 
     def send(self, *args, **kwds):
