@@ -18,9 +18,9 @@ class ThriftConnectorHook(object):
         for (callback, raises) in self.callbacks:
             try:
                 callback(*args, **kwds)
+            except raises:
+                raise
             except Exception as e:
-                if raises and any(isinstance(e, ec) for ec in raises):
-                    raise e
                 logger.warning(e, exc_info=True)
 
 
