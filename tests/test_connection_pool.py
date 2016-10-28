@@ -438,8 +438,35 @@ def test_api_call_context(
     with pool.connection_ctx() as client:
         with pytest.raises(TypeError) as exc_info:
             client.win()
+        assert "test" in str(exc_info.value)
+    before_call.callbacks.clear()
+    after_call.callbacks.clear()
 
-    assert "test" in str(exc_info.value)
+    mock_before_hook_with_err = Mock(side_effect=TypeError('test'))
+    before_call.register(mock_before_hook_with_err, raises=[TypeError,
+                                                            RuntimeError])
+    with pool.connection_ctx() as client:
+        with pytest.raises(TypeError) as exc_info:
+            client.win()
+        assert "test" in str(exc_info.value)
+    before_call.callbacks.clear()
+    after_call.callbacks.clear()
+
+    mock_before_hook_with_err = Mock(side_effect=TypeError('test'))
+    before_call.register(mock_before_hook_with_err, raises=(TypeError,
+                                                            RuntimeError))
+    with pool.connection_ctx() as client:
+        with pytest.raises(TypeError) as exc_info:
+            client.win()
+        assert "test" in str(exc_info.value)
+    before_call.callbacks.clear()
+    after_call.callbacks.clear()
+
+    before_call.register(mock_before_hook_with_err, raises=TypeError)
+    with pool.connection_ctx() as client:
+        with pytest.raises(TypeError) as exc_info:
+            client.win()
+        assert "test" in str(exc_info.value)
     before_call.callbacks.clear()
     after_call.callbacks.clear()
 

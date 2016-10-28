@@ -12,15 +12,18 @@ class ThriftConnectorHook(object):
         self.callbacks = set()
 
     def register(self, callback, raises=None):
+        if isinstance(raises, list):
+            raises = tuple(raises)
+
         self.callbacks.add((callback, raises))
 
     def send(self, *args, **kwds):
         for (callback, raises) in self.callbacks:
             try:
                 callback(*args, **kwds)
+            except raises:
+                raise
             except Exception as e:
-                if raises and any(isinstance(e, ec) for ec in raises):
-                    raise e
                 logger.warning(e, exc_info=True)
 
 
