@@ -5,6 +5,7 @@ import contextlib
 import random
 import threading
 import time
+import socket
 
 from collections import deque
 
@@ -371,7 +372,7 @@ class BaseClientPool(object):
                     if api and callable(api):
                         return api(*args, **kwds)
                     raise AttributeError("%s not found in %s" % (name, client))
-                except client.TTransportException:
+                except (client.TTransportException, socket.error):
                     will_put_back = False
                     client.close()
                     raise
@@ -389,7 +390,7 @@ class BaseClientPool(object):
         try:
             yield client
             self.put_back_connection(client)
-        except client.TTransportException:
+        except (client.TTransportException, socket.error):
             client.close()
             raise
         except Exception:
@@ -496,8 +497,8 @@ class HeartbeatClientPool(ClientPool):
                 if conn is None:
                     break
 
-                if (time.time()-conn.latest_use_time < self.check_interval
-                        or conn.test_connection()):
+                if (time.time()-conn.latest_use_time < self.check_interval or
+                        conn.test_connection()):
                     self.put_back_connection(conn)
                 else:
                     conn.close()
