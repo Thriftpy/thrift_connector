@@ -2,6 +2,7 @@
 
 import time
 import logging
+from functools import wraps
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,7 @@ class ThriftConnectorHook(object):
 
 before_call = ThriftConnectorHook('before_call')
 after_call = ThriftConnectorHook('after_call')
+after_get_client_from_pool = ThriftConnectorHook('after_get_client_from_pool')
 
 
 def api_call_context(pool, client, api_name):
@@ -51,3 +53,19 @@ def api_call_context(pool, client, api_name):
                 after_call.send(pool, client, api_name, start, cost, ret)
         return wrapper
     return deco
+
+
+def client_get_hook(func):
+    @wraps(func)
+    def _(pool, *args, **kwds):
+        start = time.time()
+        client, e = None, None
+        try:
+            client = func(pool, *args, **kwds)
+        except BaseException as e:
+            raise
+        finally:
+            cost = time.time() - start
+            after_get_client_from_pool.send(pool, client, start, cost, e)
+        return client
+    return _
