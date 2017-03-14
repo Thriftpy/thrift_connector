@@ -9,7 +9,8 @@ import socket
 
 from collections import deque
 
-from .hooks import api_call_context
+from .hooks import api_call_context, client_get_hook
+
 
 logger = logging.getLogger(__name__)
 
@@ -358,6 +359,7 @@ class BaseClientPool(object):
             use_limit=self.use_limit,
         )
 
+    @client_get_hook
     def get_client(self):
         return self.get_client_from_pool() or self.produce_client()
 
