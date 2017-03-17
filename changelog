@@ -1,6 +1,14 @@
 Changelog
 ==========
 
+0.23
+-----
+
+* Add hooks to record cost of test_connection/produce_client.
+* Catch socket.error when connection abruptly terminated.
+* Better exception handling for call hooks.
+
+
 0.22
 -----
 
