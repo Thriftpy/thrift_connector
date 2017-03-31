@@ -10,8 +10,8 @@ from tornado import gen
 from tornado.concurrent import Future, is_future
 from tornado.ioloop import PeriodicCallback
 
-from thrift_connector.connection_pool import ThriftClient, BaseClientPool, ThriftPyBaseClient, \
-    ClientPool, validate_host_port
+from thrift_connector.connection_pool import ThriftClient, BaseClientPool, \
+    ThriftPyBaseClient, ClientPool, validate_host_port
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +79,10 @@ class TornadoThriftPyClient(ThriftPyBaseClient):
     def get_transport_factory(cls):
         from thriftpy.tornado import TTornadoStreamTransport
         return lambda socket: TTornadoStreamTransport(
-            socket[0], socket[1], read_timeout=timedelta(milliseconds=socket[2]))
+            socket[0],
+            socket[1],
+            read_timeout=timedelta(milliseconds=socket[2])
+        )
 
     @classmethod
     def get_protoco_factory(self):
@@ -144,8 +147,9 @@ class _ContextManagerFuture(Future):
     At the end of the block, the Future's exit callback will be invoked
     with this value and the exception if caught.
 
-    Inspired by `toro <https://github.com/ajdavis/toro>`_. The original code is licensed under
-    Apache License, Version 2.0 (`LICENSE <https://raw.githubusercontent.com/ajdavis/toro/master/LICENSE>`_).
+    Inspired by `toro <https://github.com/ajdavis/toro>`_. The original code is
+    licensed under Apache License, Version 2.0
+    (`LICENSE <https://raw.githubusercontent.com/ajdavis/toro/master/LICENSE>`_).
     """
 
     def __init__(self, wrapped, exit_callback):
@@ -196,13 +200,15 @@ class TornadoBaseClientPool(BaseClientPool):
                 connection.close()
                 future.set_result(None)
 
-        connection.test_connection().add_done_callback(cb)  # make sure old connection is usable
+        connection.test_connection().add_done_callback(
+            cb)  # make sure old connection is usable
 
         return future
 
     @gen.coroutine
     def get_client(self):
-        raise gen.Return((yield self.get_client_from_pool()) or self.produce_client())
+        raise gen.Return((yield self.get_client_from_pool()) or
+                         self.produce_client())
 
     def __getattr__(self, name):
         method = self.__api_method_cache.get(name)
@@ -243,9 +249,11 @@ class TornadoBaseClientPool(BaseClientPool):
         future = self.get_client()
 
         if timeout is not None:
-            future.add_done_callback(lambda f: f.result().set_client_timeout(timeout * 1000))
+            future.add_done_callback(
+                lambda f: f.result().set_client_timeout(timeout * 1000))
 
-        return _ContextManagerFuture(future, self._connection_ctx_exit_callback)
+        return _ContextManagerFuture(
+            future, self._connection_ctx_exit_callback)
 
 
 class TornadoClientPool(TornadoBaseClientPool, ClientPool):
@@ -273,7 +281,8 @@ class TornadoHeartbeatClientPool(TornadoClientPool):
         )
         self.check_interval = check_interval
 
-        self._heartbeat_timer = PeriodicCallback(self.maintain_connections, max(1, self.timeout - 5) * 1000)
+        self._heartbeat_timer = PeriodicCallback(
+            self.maintain_connections, max(1, self.timeout - 5) * 1000)
         self._heartbeat_timer.start()
 
     def get_client_from_pool(self):
