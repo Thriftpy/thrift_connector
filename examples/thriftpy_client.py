@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 
 import thriftpy
 from thrift_connector import ClientPool, ThriftPyCyClient
@@ -11,7 +12,7 @@ pool = ClientPool(
     connection_class=ThriftPyCyClient
     )
 
-print "Sending Ping..."
-print "Receive:", pool.ping()
-print "Winning the match..."
-print "Receive:", pool.win()
+print("Sending Ping...")
+print("Receive:", pool.ping())
+print("Winning the match...")
+print("Receive:", pool.win())

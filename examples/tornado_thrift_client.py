@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 from tornado import gen
+
 from tornado.ioloop import IOLoop
 
 from pingpong_app.pingpong_sdk_tornado.pingpong import PingService
@@ -14,20 +16,20 @@ pool = TornadoClientPool(
 
 
 def callback(future):
-    print future.result()
+    print(future.result())
     IOLoop.current().stop()
 
 
 @gen.coroutine
 def main():
-    print "Sending Ping..."
-    print "Receive:", (yield pool.ping())
-    print "Sleeping..."
+    print("Sending Ping...")
+    print("Receive:", (yield pool.ping()))
+    print("Sleeping...")
     with (yield pool.connection_ctx()) as conn:
         yield conn.sleep(1)
-    print "Waked!"
-    print "Winning the match..."
-    print "Receive:"
+    print("Waked!")
+    print("Winning the match...")
+    print("Receive:")
     pool.win().add_done_callback(callback)
 
 
