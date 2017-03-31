@@ -59,13 +59,14 @@ def client_get_hook(func):
     @wraps(func)
     def _(pool, *args, **kwds):
         start = time.time()
-        client, e = None, None
+        client, exception = None, None
         try:
             client = func(pool, *args, **kwds)
         except BaseException as e:
+            exception = e
             raise
         finally:
             cost = time.time() - start
-            after_get_client_from_pool.send(pool, client, start, cost, e)
+            after_get_client_from_pool.send(pool, client, start, cost, exception)
         return client
     return _
