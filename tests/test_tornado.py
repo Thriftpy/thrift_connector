@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+
+from __future__ import absolute_import
+
 import contextlib
 import random
 import signal
@@ -18,7 +22,7 @@ from tornado import gen
 from tornado.concurrent import Future
 from tornado.ioloop import IOLoop
 
-from pingpong_app.fixtures import TestServerInfo
+from .pingpong_app.fixtures import TestServerInfo
 
 
 @contextlib.contextmanager
@@ -40,9 +44,13 @@ def tornado_pingpong_thrift_server(request):
     port2 = random.randint(15536, 25536)
     config_path = "examples/gunicorn_config.py"
     gunicorn_server = subprocess.Popen(
-        ["gunicorn_thrift", "examples.pingpong_app.app:app",
-         "-c", config_path, "--bind", "0.0.0.0:%s" % port,
-         "--bind", "0.0.0.0:%s" % port2, '--thrift-transport-factory', 'thriftpy.transport:TFramedTransportFactory']
+        ["gunicorn_thrift",
+         "examples.pingpong_app.app:app",
+         "-c", config_path,
+         "--bind", "0.0.0.0:%s" % port,
+         "--bind", "0.0.0.0:%s" % port2,
+         '--thrift-transport-factory',
+         'thriftpy.transport:TFramedTransportFactory']
     )
 
     def shutdown():
@@ -56,10 +64,12 @@ def tornado_pingpong_thrift_server(request):
 
 @pytest.fixture(scope='class')
 def tornado_pingpong_thrift_client(request, pingpong_service_key,
-                                   pingpong_thrift_service, tornado_pingpong_thrift_server):
+                                   pingpong_thrift_service,
+                                   tornado_pingpong_thrift_server):
     port, port2, gunicorn_server = tornado_pingpong_thrift_server
 
-    from thrift_connector.tornado import TornadoClientPool, TornadoThriftPyClient
+    from thrift_connector.tornado import TornadoClientPool, \
+        TornadoThriftPyClient
 
     pool = TornadoClientPool(
         pingpong_thrift_service,
@@ -114,7 +124,8 @@ class ClientPoolTest(_AsyncTestCase):
 
     @tornado.testing.gen_test
     def test_client_pool_dead_connection_occured(self):
-        os.kill(self.pingpong_thrift_client.process.pid, signal.SIGHUP)  # restart
+        os.kill(self.pingpong_thrift_client.process.pid,
+                signal.SIGHUP)  # restart
         time.sleep(1)
 
         with (yield self.pingpong_thrift_client.pool.connection_ctx()) as c:
@@ -157,7 +168,8 @@ class ClientPoolTest(_AsyncTestCase):
         try:
             available_clients = []
             for _ in range(5):
-                with (yield self.pingpong_thrift_client.pool.connection_ctx()) as c:
+                with (yield
+                      self.pingpong_thrift_client.pool.connection_ctx()) as c:
                     yield c.ping()
                     available_clients.append(c)
 
@@ -172,7 +184,8 @@ class ClientPoolTest(_AsyncTestCase):
                     except TTransportException:
                         pass
                     else:
-                        self.fail('Overflown connections should be closed after use')
+                        self.fail(
+                            'Overflown connections should be closed after use')
                 else:
                     yield c.ping()
         finally:
@@ -226,10 +239,13 @@ class ClientPoolTest(_AsyncTestCase):
 
         self.assertEqual(len(pool.connections), 1)
 
-        # If predefined exception occurs, conn should be put back and available.
+        # If predefined exception occurs, conn should be put back and
+        # available.
         try:
-            with (yield self.pingpong_thrift_client.pool.connection_ctx()) as c:
-                raise self.pingpong_thrift_client.service.AboutToShutDownException
+            with (yield
+                  self.pingpong_thrift_client.pool.connection_ctx()) as c:
+                raise self.pingpong_thrift_client.service \
+                    .AboutToShutDownException
         except self.pingpong_thrift_client.service.AboutToShutDownException:
             pass
         else:
@@ -240,7 +256,8 @@ class ClientPoolTest(_AsyncTestCase):
             yield c.ping()
 
     @tornado.testing.gen_test
-    def test_should_not_put_back_connection_if_ttransport_exception_raised(self):
+    def test_should_not_put_back_connection_if_ttransport_exception_raised(
+            self):
         pool = self.pingpong_thrift_client.pool
 
         with (yield self.pingpong_thrift_client.pool.connection_ctx()) as c:
@@ -272,12 +289,14 @@ class ClientPoolTest(_AsyncTestCase):
 
         def should_fail_api():
             future = Future()
-            future.set_exception(self.pingpong_thrift_client.service.AboutToShutDownException())
+            future.set_exception(
+                self.pingpong_thrift_client.service.AboutToShutDownException())
             return future
 
         c.should_fail_api = should_fail_api
 
-        # If predefined exception occurs, conn should be put back and available.
+        # If predefined exception occurs, conn should be put back and
+        # available.
         try:
             yield pool.should_fail_api()
         except self.pingpong_thrift_client.service.AboutToShutDownException:
@@ -375,8 +394,10 @@ class RandomMultiServerClientTest(_AsyncTestCase):
     @tornado.testing.gen_test
     def test_random_multiconnection_pool(self):
         servers = [
-            (self.pingpong_thrift_client.host, self.pingpong_thrift_client.port),
-            (self.pingpong_thrift_client.host, self.pingpong_thrift_client.port2),
+            (self.pingpong_thrift_client.host,
+             self.pingpong_thrift_client.port),
+            (self.pingpong_thrift_client.host,
+             self.pingpong_thrift_client.port2),
         ]
 
         from thrift_connector.tornado import TornadoRandomMultiServerClient
@@ -397,8 +418,10 @@ class RoundRobinMultiServerClientTest(_AsyncTestCase):
     @tornado.testing.gen_test
     def test_roundrobin_multiconnection_pool(self):
         servers = [
-            (self.pingpong_thrift_client.host, self.pingpong_thrift_client.port),
-            (self.pingpong_thrift_client.host, self.pingpong_thrift_client.port2),
+            (self.pingpong_thrift_client.host,
+             self.pingpong_thrift_client.port),
+            (self.pingpong_thrift_client.host,
+             self.pingpong_thrift_client.port2),
         ]
 
         from thrift_connector.tornado import TornadoRoundRobinMultiServerClient
@@ -453,14 +476,16 @@ class HeartbeatClientPoolTest(_AsyncTestCase):
         # this call should fail
         disconnected_client = yield heartbeat_pool.get_client()
         self.assertFalse((yield disconnected_client.test_connection()))
-        self.assertTrue(heartbeat_pool.put_back_connection(disconnected_client))
+        self.assertTrue(
+            heartbeat_pool.put_back_connection(disconnected_client))
         self.assertEqual(heartbeat_pool.pool_size(), 1)
 
         yield gen.sleep(1)
         self.assertEqual(heartbeat_pool.pool_size(), 1)
         # after check_interval, connection need check, but connection is dead
         yield gen.sleep(2)
-        # disconnection should be detected and dead clients removed (1 client may not be counted if it is being checked)
+        # disconnection should be detected and dead clients removed (1 client
+        # may not be counted if it is being checked)
         self.assertEqual(heartbeat_pool.pool_size(), 0)
 
         for _ in range(3):
@@ -470,7 +495,8 @@ class HeartbeatClientPoolTest(_AsyncTestCase):
         yield gen.sleep(4)
 
         # Make sure all clients have been checked
-        use_counts = [client.use_count for client in heartbeat_pool.connections]
+        use_counts = [
+            client.use_count for client in heartbeat_pool.connections]
         self.assertTrue(all(use_counts))
 
         heartbeat_pool.clear()
@@ -498,7 +524,8 @@ class APICallContextTest(_AsyncTestCase):
                 yield ping_future
 
             mock_before_hook.assert_called_with(pool, conn, 'ping', fake_time)
-            mock_after_hook.assert_called_with(pool, conn, 'ping', fake_time, 0, ping_future)
+            mock_after_hook.assert_called_with(
+                pool, conn, 'ping', fake_time, 0, ping_future)
 
         # raise Exception when raises specified
         mock_before_hook_with_err = Mock(side_effect=TypeError('test'))
@@ -559,6 +586,8 @@ class FillConnectionPoolTest(_AsyncTestCase):
         self.assertEqual(pool.pool_size(), 0)
         pool.yield_server = Mock(
             return_value=(
-                self.pingpong_thrift_client.host, self.pingpong_thrift_client.port))
+                self.pingpong_thrift_client.host,
+                self.pingpong_thrift_client.port
+            ))
         pool.fill_connection_pool()
         self.assertEqual(pool.pool_size(), pool.max_conn)

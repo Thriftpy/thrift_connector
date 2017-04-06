@@ -1,3 +1,4 @@
 # -*- coding: utf-8 -*-
+from __future__ import absolute_import
 
-from pingpong_app.fixtures import *
+from .pingpong_app.fixtures import *

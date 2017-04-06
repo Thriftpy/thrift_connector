@@ -384,7 +384,8 @@ def test_heartbeat_client_pool(
     assert heartbeat_pool.pool_size() == 1
     # after check_interval, connection need check, but connection is dead
     time.sleep(2)
-    # disconnection should be detected and dead clients removed (1 client may not be counted if it is being checked)
+    # disconnection should be detected and dead clients removed
+    # (1 client may not be counted if it is being checked)
     assert heartbeat_pool.pool_size() == 0
 
     for _ in range(3):

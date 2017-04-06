@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 
 from pingpong_app.pingpong_sdk.pingpong import PingService
 from thrift_connector import ClientPool, ThriftClient
@@ -10,7 +11,7 @@ pool = ClientPool(
     connection_class=ThriftClient
     )
 
-print "Sending Ping..."
-print "Receive:", pool.ping()
-print "Winning the match..."
-print "Receive:", pool.win()
+print("Sending Ping...")
+print("Receive:", pool.ping())
+print("Winning the match...")
+print("Receive:", pool.win())
