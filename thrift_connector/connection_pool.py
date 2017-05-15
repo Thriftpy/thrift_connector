@@ -52,7 +52,8 @@ class ThriftBaseClient(object):
         )
 
     def __getattr__(self, name):
-        return getattr(self.client, name)
+        client = object.__getattribute__(self, 'client')
+        return object.__getattribute__(client, name)
 
     def init_client(self, client):
         pass
