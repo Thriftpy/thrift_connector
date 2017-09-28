@@ -6,6 +6,11 @@ native thrift client and thriftpy client with minor difference in usage.
 
 Examples can be found in `examples` as well as the following sections.
 
+How it works
+=============
+
+It maintains a connection pool, and it'll do a precheck(calling `ping`)
+to validate the connection to ensure the connection is always usable.
 
 Options
 -------
