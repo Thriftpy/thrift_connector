@@ -20,7 +20,7 @@ from thrift_connector.connection_pool import (
     RandomMultiServerClient,
     HeartbeatClientPool,
 )
-from thriftpy.transport import TTransportException
+from thriftpy2.transport import TTransportException
 
 
 @pytest.fixture

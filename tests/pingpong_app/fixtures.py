@@ -16,8 +16,8 @@ def worker_term(worker):
 
 @pytest.fixture(scope="session")
 def pingpong_thrift_service(request, pingpong_service_key):
-    import thriftpy
-    thrift_service = thriftpy.load(
+    import thriftpy2
+    thrift_service = thriftpy2.load(
         os.path.join(
             os.path.dirname(
                 os.path.dirname(

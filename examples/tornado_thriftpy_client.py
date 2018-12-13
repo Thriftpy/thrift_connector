@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 
-import thriftpy
+import thriftpy2
 from tornado import gen
 from tornado.ioloop import IOLoop
 
 from thrift_connector.tornado import TornadoClientPool, TornadoThriftPyClient
 
-service = thriftpy.load("pingpong_app/pingpong.thrift")
+service = thriftpy2.load("pingpong_app/pingpong.thrift")
 pool = TornadoClientPool(
     service.PingService,
     'localhost',

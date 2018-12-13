@@ -50,7 +50,7 @@ def tornado_pingpong_thrift_server(request):
          "--bind", "0.0.0.0:%s" % port,
          "--bind", "0.0.0.0:%s" % port2,
          '--thrift-transport-factory',
-         'thriftpy.transport:TFramedTransportFactory']
+         'thriftpy2.transport:TFramedTransportFactory']
     )
 
     def shutdown():
@@ -151,7 +151,7 @@ class ClientPoolTest(_AsyncTestCase):
 
     @tornado.testing.gen_test
     def test_client_pool_overflow(self):
-        from thriftpy.transport import TTransportException
+        from thriftpy2.transport import TTransportException
         from thrift_connector.tornado import TornadoClientPool
 
         pool = self.pingpong_thrift_client.pool
@@ -222,7 +222,7 @@ class ClientPoolTest(_AsyncTestCase):
         self.assertEqual(len(pool.connections), 1)
 
         # If TTransportException occurs, conn shouldn't be put back into pool.
-        from thriftpy.transport import TTransportException
+        from thriftpy2.transport import TTransportException
         try:
             with (yield self.pingpong_thrift_client.pool.connection_ctx()):
                 raise TTransportException

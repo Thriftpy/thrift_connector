@@ -198,21 +198,21 @@ class ThriftPyBaseClient(ThriftBaseClient):
 
     @property
     def TTransportException(self):
-        from thriftpy.transport import TTransportException
+        from thriftpy2.transport import TTransportException
         return TTransportException
 
     def get_tclient(self, service, protocol):
         if self.tracking is True:
-            from thriftpy.contrib.tracking import TTrackedClient
+            from thriftpy2.contrib.tracking import TTrackedClient
             client = TTrackedClient(self.tracker_factory, service, protocol)
         else:
-            from thriftpy.thrift import TClient
+            from thriftpy2.thrift import TClient
             client = TClient(service, protocol)
         return client
 
     @classmethod
     def get_socket_factory(self):
-        from thriftpy.transport import TSocket
+        from thriftpy2.transport import TSocket
         return TSocket
 
     @classmethod
@@ -226,24 +226,24 @@ class ThriftPyBaseClient(ThriftBaseClient):
 class ThriftPyClient(ThriftPyBaseClient):
     @classmethod
     def get_protoco_factory(self):
-        from thriftpy.protocol import TBinaryProtocolFactory
+        from thriftpy2.protocol import TBinaryProtocolFactory
         return TBinaryProtocolFactory().get_protocol
 
     @classmethod
     def get_transport_factory(self):
-        from thriftpy.transport import TBufferedTransportFactory
+        from thriftpy2.transport import TBufferedTransportFactory
         return TBufferedTransportFactory().get_transport
 
 
 class ThriftPyCyClient(ThriftPyBaseClient):
     @classmethod
     def get_protoco_factory(self):
-        from thriftpy.protocol import TCyBinaryProtocolFactory
+        from thriftpy2.protocol import TCyBinaryProtocolFactory
         return TCyBinaryProtocolFactory().get_protocol
 
     @classmethod
     def get_transport_factory(self):
-        from thriftpy.transport import TCyBufferedTransportFactory
+        from thriftpy2.transport import TCyBufferedTransportFactory
         return TCyBufferedTransportFactory().get_transport
 
 

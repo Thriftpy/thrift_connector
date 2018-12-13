@@ -16,7 +16,7 @@ Options
 -------
 
 service
-    Defined thrift service. It should be the container class of apis for thriftpy (`thriftpy.load('...').XXXService`), and api module for thrift (`XXX_sdk.xxx.xxxService`)
+    Defined thrift service. It should be the container class of apis for thriftpy (`thriftpy2.load('...').XXXService`), and api module for thrift (`XXX_sdk.xxx.xxxService`)
 host
     Server host
 port
@@ -42,10 +42,10 @@ Examples for thriftpy is:
 
 .. code:: python
 
-    import thriftpy
+    import thriftpy2
     import thrift_connector.connection_pool as connection_pool
 
-    service = thriftpy.load("pingpong_app/pingpong.thrift")
+    service = thriftpy2.load("pingpong_app/pingpong.thrift")
     pool = connection_pool.ClientPool(
         service.PingService,
         'localhost',
