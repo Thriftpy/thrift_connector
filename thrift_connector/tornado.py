@@ -27,12 +27,12 @@ class TornadoThriftClient(ThriftClient):
 
     @classmethod
     def get_transport_factory(self):
-        from thrift.TTornado import TTornadoStreamTransport
+        from thrift2.TTornado import TTornadoStreamTransport
         return lambda socket: TTornadoStreamTransport(socket[0], socket[1])
 
     @classmethod
     def get_protoco_factory(self):
-        from thrift.protocol import TBinaryProtocol
+        from thrift2.protocol import TBinaryProtocol
         return lambda _: TBinaryProtocol.TBinaryProtocolFactory()
 
     def get_tclient(self, service, protocol):
