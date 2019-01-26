@@ -27,12 +27,12 @@ class TornadoThriftClient(ThriftClient):
 
     @classmethod
     def get_transport_factory(self):
-        from thrift.TTornado import TTornadoStreamTransport
+        from thrift2.TTornado import TTornadoStreamTransport
         return lambda socket: TTornadoStreamTransport(socket[0], socket[1])
 
     @classmethod
     def get_protoco_factory(self):
-        from thrift.protocol import TBinaryProtocol
+        from thrift2.protocol import TBinaryProtocol
         return lambda _: TBinaryProtocol.TBinaryProtocolFactory()
 
     def get_tclient(self, service, protocol):
@@ -77,7 +77,7 @@ class TornadoThriftPyClient(ThriftPyBaseClient):
 
     @classmethod
     def get_transport_factory(cls):
-        from thriftpy.tornado import TTornadoStreamTransport
+        from thriftpy2.tornado import TTornadoStreamTransport
         return lambda socket: TTornadoStreamTransport(
             socket[0],
             socket[1],
@@ -87,8 +87,8 @@ class TornadoThriftPyClient(ThriftPyBaseClient):
     @classmethod
     def get_protoco_factory(self):
         # These imports bypass the cython binary
-        from thriftpy.protocol.binary import TBinaryProtocolFactory
-        from thriftpy.transport.memory import TMemoryBuffer
+        from thriftpy2.protocol.binary import TBinaryProtocolFactory
+        from thriftpy2.transport.memory import TMemoryBuffer
 
         factory = TBinaryProtocolFactory()
         return lambda transport: (
@@ -101,7 +101,7 @@ class TornadoThriftPyClient(ThriftPyBaseClient):
             raise NotImplementedError(
                 "%s doesn't support tracking" % self.__class__.__name__)
 
-        from thriftpy.tornado import TTornadoClient
+        from thriftpy2.tornado import TTornadoClient
         return TTornadoClient(service, protocol[0], protocol[1])
 
     def set_client_timeout(self, timeout):

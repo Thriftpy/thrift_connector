@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 
-import thriftpy
+import thriftpy2
 from thrift_connector import ClientPool, ThriftPyCyClient
 
-service = thriftpy.load("pingpong_app/pingpong.thrift")
+service = thriftpy2.load("pingpong_app/pingpong.thrift")
 pool = ClientPool(
     service.PingService,
     'localhost',

@@ -3,10 +3,10 @@
 
 import os
 import time
-import thriftpy
-from thriftpy.thrift import TProcessor
+import thriftpy2
+from thriftpy2.thrift import TProcessor
 
-thrift_service = thriftpy.load(os.path.join(os.path.dirname(__file__), "pingpong.thrift"), "pingpong_thrift")  # noqa
+thrift_service = thriftpy2.load(os.path.join(os.path.dirname(__file__), "pingpong.thrift"), "pingpong_thrift")  # noqa
 service = thrift_service.PingService
 
 
