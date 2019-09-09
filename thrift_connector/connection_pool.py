@@ -522,7 +522,7 @@ class ClientPool(BaseClientPool):
         return self.host, self.port
 
 class ThriftHTTPClientPool(BaseClientPool):
-    def __init__(self, service, host:str, port=None, path=None, scheme='http', headers=None, timeout=300, name=None,
+    def __init__(self, service, host, port=None, path=None, scheme='http', headers=None, timeout=300, name=None,
                  raise_empty=False, max_conn=30, connection_class=ThriftHttpClient,
                  keepalive=None, tracking=False, tracker_factory=None,
                  use_limit=None):
