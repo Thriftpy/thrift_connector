@@ -679,7 +679,7 @@ class RoundRobinMultiServerClient(MultiServerClientBase):
         return ret
 
 class THttpEntity(object):
-    def __init__(self, uri_or_host: str, port: int = None, path: str = None, scheme: str = 'http', headers=None):
+    def __init__(self, uri_or_host, port=None, path=None, scheme='http', headers=None):
         self.host = uri_or_host
         self.port = port
         self.path = path
@@ -690,7 +690,7 @@ class THttpEntity(object):
         self._timeout = timeout
 
 class THttpClientTransportAdapter(THttpClient):
-    def __init__(self, entity: THttpEntity):
+    def __init__(self, entity):
         super(THttpClientTransportAdapter, self).__init__(entity.scheme + "://" + entity.host + ":" + str(entity.port) + ("" if entity.path == None or entity.path == "" else entity.path))
         if entity.headers and isinstance(entity.headers, dict):
             self.setCustomHeaders(entity.headers)
