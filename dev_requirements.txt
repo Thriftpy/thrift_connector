@@ -5,7 +5,7 @@ gunicorn==19.7.1
 gunicorn_thrift==0.2.18
 mccabe==0.2.1
 pep8==1.7.0
-py==1.4.33
+py==1.10.0
 pyflakes==1.5.0
 pytest==3.0.7
 setproctitle==1.1.10
